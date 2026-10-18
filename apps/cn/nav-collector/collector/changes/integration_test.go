@@ -309,12 +309,20 @@ func TestP23SiteCapabilityChangeBackfillAndRebuildIntegration(t *testing.T) {
 	}
 	engine := New(pool, Options{})
 	summary, err := engine.Backfill(ctx, BackfillOptions{Detector: "http2_transition", Version: 1, Through: &day2, MaxDays: 2})
-	if err != nil || summary.Processed != 2 {
-		t.Fatalf("HTTP/2 Change backfill summary=%+v err=%v", summary, err)
+	if err == nil || !strings.Contains(err.Error(), "active") || summary.Processed != 0 {
+		t.Fatalf("retired HTTP/2 Change accepted backfill: summary=%+v err=%v", summary, err)
+	}
+	// Existing v1 history remains explicitly rebuildable after registry retirement.
+	if _, err := pool.Exec(ctx, `SELECT gfn_project_site_capability_change_day('http2_transition',1,$1::date);SELECT gfn_project_site_capability_change_day('http2_transition',1,$2::date);UPDATE gfn_change_checkpoints SET processed_through=$2::date WHERE detector_key='http2_transition' AND detector_version=1`, pgx.QueryExecModeSimpleProtocol, day1, day2); err != nil {
+		t.Fatal(err)
 	}
 	rebuilt, err := engine.Rebuild(ctx, "http2_transition", 1, day2, &day2, 0, false)
 	if err != nil || rebuilt.Processed != 1 {
 		t.Fatalf("HTTP/2 Change rebuild summary=%+v err=%v", rebuilt, err)
+	}
+	var retiredHistory bool
+	if err := pool.QueryRow(ctx, `SELECT registry.status='retired' AND checkpoint.processed_through=$1::date FROM gfn_change_registry registry JOIN gfn_change_checkpoints checkpoint USING(detector_key,detector_version) WHERE detector_key='http2_transition' AND detector_version=1`, day2).Scan(&retiredHistory); err != nil || !retiredHistory {
+		t.Fatalf("rebuild changed v1 retirement/checkpoint: %v", err)
 	}
 	var eventCode string
 	if err := pool.QueryRow(ctx, `SELECT event_code FROM gfn_change_events WHERE detector_key='http2_transition' AND detector_version=1 AND site_id=872101 AND projection_date=$1`, day2).Scan(&eventCode); err != nil || eventCode != "http2_enabled" {

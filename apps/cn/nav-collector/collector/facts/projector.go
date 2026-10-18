@@ -21,7 +21,7 @@ func projectKnownState(protocol string, payload []byte) ([]byte, error) {
 	var projected map[string]any
 	switch protocol {
 	case "http":
-		projected = pick(raw, "status_code", "response_time_ms", "ttfb_ms", "http_protocol", "server", "remote_ip", "final_url", "canonical_url", "security_headers")
+		projected = pick(raw, "status_code", "response_time_ms", "ttfb_ms", "http_protocol", "http2_probe_profile", "tls_alpn", "final_scheme", "server", "remote_ip", "final_url", "canonical_url", "security_headers")
 		tls := renamePick(raw, map[string]string{
 			"tls_handshake": "handshake", "tls_version": "version",
 			"cipher_suite": "cipher_suite", "cert_verified": "cert_verified",

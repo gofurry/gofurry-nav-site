@@ -35,6 +35,9 @@ type HTTPModel struct {
 	SharePreview         *HTTPSharePreview   `json:"sharePreview,omitempty"`
 	RedirectHint         *HTTPRedirectHint   `json:"redirectHint,omitempty"`
 	FinalURL             string              `json:"-"` // v2 observation 最终 URL
+	FinalScheme          string              `json:"-"` // 最终响应 URL 的 scheme，不沿用初始 TLS 标记
+	HTTP2ProbeProfile    string              `json:"-"` // 成功响应使用的 H2-enabled 探测配置版本
+	TLSALPN              string              `json:"-"` // 最终响应 TLS 实际协商的 ALPN，空值亦为证据
 	ContentType          string              `json:"-"` // v2 observation Content-Type
 	SecurityHeaders      map[string]bool     `json:"-"` // v2 observation 常见安全响应头是否存在
 	SecurityHeaderValues map[string]string   `json:"-"` // v2 observation 常见安全响应头原始值
@@ -212,7 +215,6 @@ var CipherSuiteMap = map[uint16]string{
 var HeadersMap = map[string]string{
 	"User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 	"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-	"Connection":      "Keep-Alive",
 	"Accept-Language": "zh-CN,zh;q=0.9",
 }
 

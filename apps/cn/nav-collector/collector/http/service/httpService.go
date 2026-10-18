@@ -431,6 +431,9 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 		"security_headers":                  securityHeadersWithDefaults(result.SecurityHeaders),
 		"security_header_summary":           buildHTTPSecurityHeaderSummary(result.SecurityHeaderValues),
 		"http_protocol":                     result.HTTPProtocol,
+		"http2_probe_profile":               result.HTTP2ProbeProfile,
+		"final_scheme":                      result.FinalScheme,
+		"tls_alpn":                          result.TLSALPN,
 		"dns_lookup_ms":                     result.DNSLookupMS,
 		"tcp_connect_ms":                    result.TCPConnectMS,
 		"tls_handshake_ms":                  result.TLSHandshakeMS,
@@ -1289,6 +1292,7 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	probeBudget := env.GetServerConfig().Collector.ProbeBudget
 
 	transport := &http.Transport{
+		ForceAttemptHTTP2: true,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
@@ -1303,7 +1307,8 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 			res.ResponseTime = time.Since(probeStart).Milliseconds()
 			res.ErrorCode = "http_proxy_config_invalid"
 			if err != nil {
-				res.ErrorMessage = err.Error()
+				// url.Parse errors may contain the original proxy userinfo.
+				res.ErrorMessage = "代理地址无法解析"
 			} else {
 				res.ErrorMessage = "代理地址缺少 scheme 或 host"
 			}
@@ -1429,6 +1434,15 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Redirects = redirects
 	if resp.Request != nil && resp.Request.URL != nil {
 		res.FinalURL = resp.Request.URL.String()
+		res.FinalScheme = resp.Request.URL.Scheme
+		// RoundTrip has initialized the protocol handlers. A runtime override
+		// such as GODEBUG=http2client=0 must not produce a trusted H1 negative.
+		if transport.TLSNextProto["h2"] != nil {
+			res.HTTP2ProbeProfile = "go_h2_enabled_v1"
+		}
+	}
+	if resp.TLS != nil {
+		res.TLSALPN = resp.TLS.NegotiatedProtocol
 	}
 	res.ContentType = resp.Header.Get("Content-Type")
 	res.SecurityHeaders = detectHTTPSecurityHeaders(resp.Header)

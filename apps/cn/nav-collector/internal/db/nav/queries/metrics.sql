@@ -57,6 +57,12 @@ WHERE fact_date = sqlc.arg(fact_date)
 
 -- name: ProjectNavMetricDay :one
 SELECT CASE
+    WHEN sqlc.arg(metric_key)::text = 'http2_adoption'
+         AND sqlc.arg(metric_version)::integer = 2 THEN gfn_project_http2_metric_day_v2(
+        sqlc.arg(metric_key)::text,
+        sqlc.arg(metric_version)::integer,
+        sqlc.arg(fact_date)::date
+    )
     WHEN sqlc.arg(metric_version)::integer = 2 THEN gfn_project_metric_day_v2(
         sqlc.arg(metric_key)::text,
         sqlc.arg(metric_version)::integer,

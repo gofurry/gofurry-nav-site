@@ -50,6 +50,44 @@ func TestProjectKnownStateDropsMalformedHTTPTimestamps(t *testing.T) {
 	}
 }
 
+func TestProjectKnownStatePreservesHTTP2EvidenceWithoutPromotingLegacy(t *testing.T) {
+	for _, alpn := range []string{"h2", "http/1.1", ""} {
+		raw := map[string]any{"http2_probe_profile": "go_h2_enabled_v1", "final_url": "https://final.example/path", "final_scheme": "https", "http_protocol": "HTTP/2.0", "tls_alpn": alpn, "proxy_url": "private", "authorization": "private", "cookie": "private"}
+		payload, _ := json.Marshal(raw)
+		projected, err := projectKnownState("http", payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var state map[string]any
+		if err := json.Unmarshal(projected, &state); err != nil {
+			t.Fatal(err)
+		}
+		for _, key := range []string{"http2_probe_profile", "final_url", "final_scheme", "http_protocol", "tls_alpn"} {
+			if state[key] != raw[key] {
+				t.Fatalf("evidence %s=%v want %v", key, state[key], raw[key])
+			}
+		}
+		for _, key := range []string{"proxy_url", "authorization", "cookie"} {
+			if _, ok := state[key]; ok {
+				t.Fatalf("private field %s escaped whitelist", key)
+			}
+		}
+	}
+	legacy, err := projectKnownState("http", []byte(`{"http_protocol":"HTTP/1.1","final_url":"https://old.example"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var state map[string]any
+	if err := json.Unmarshal(legacy, &state); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"http2_probe_profile", "tls_alpn", "final_scheme"} {
+		if _, ok := state[key]; ok {
+			t.Fatalf("legacy evidence gained %s", key)
+		}
+	}
+}
+
 func TestProjectKnownStateNormalizesDNS(t *testing.T) {
 	payload := []byte(`{"has_a":true,"has_aaaa":false,"aaaa_evidence":"unavailable","ipv4_count":2,"A":[{"value":"203.0.113.2","ttl":60},{"value":"203.0.113.1","ttl":30}],"TXT":[{"value":"secret"}],"name_server_hosts":["ns1.example"],"cname_chain_depth":1}`)
 	projected, err := projectKnownState("dns", payload)

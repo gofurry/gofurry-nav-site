@@ -270,35 +270,41 @@ func (q *Queries) NavMetricUpstreamProcessedThrough(ctx context.Context) (NavMet
 
 const projectNavMetricDay = `-- name: ProjectNavMetricDay :one
 SELECT CASE
-    WHEN $1::integer = 2 THEN gfn_project_metric_day_v2(
-        $2::text,
-        $1::integer,
+    WHEN $1::text = 'http2_adoption'
+         AND $2::integer = 2 THEN gfn_project_http2_metric_day_v2(
+        $1::text,
+        $2::integer,
         $3::date
     )
-    WHEN $2::text IN (
+    WHEN $2::integer = 2 THEN gfn_project_metric_day_v2(
+        $1::text,
+        $2::integer,
+        $3::date
+    )
+    WHEN $1::text IN (
         'http2_adoption', 'hsts_adoption', 'csp_adoption',
         'tls_certificate_verification'
     ) THEN gfn_project_site_capability_metric_day(
-        $2::text,
-        $1::integer,
+        $1::text,
+        $2::integer,
         $3::date
     )
     ELSE gfn_project_metric_day(
-        $2::text,
-        $1::integer,
+        $1::text,
+        $2::integer,
         $3::date
     )
 END::bigint
 `
 
 type ProjectNavMetricDayParams struct {
-	MetricVersion int32       `json:"metric_version"`
 	MetricKey     string      `json:"metric_key"`
+	MetricVersion int32       `json:"metric_version"`
 	FactDate      pgtype.Date `json:"fact_date"`
 }
 
 func (q *Queries) ProjectNavMetricDay(ctx context.Context, arg ProjectNavMetricDayParams) (int64, error) {
-	row := q.db.QueryRow(ctx, projectNavMetricDay, arg.MetricVersion, arg.MetricKey, arg.FactDate)
+	row := q.db.QueryRow(ctx, projectNavMetricDay, arg.MetricKey, arg.MetricVersion, arg.FactDate)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err

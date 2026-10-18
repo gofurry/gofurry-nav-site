@@ -209,12 +209,20 @@ func TestP23SiteCapabilityMetricBackfillAndRebuildIntegration(t *testing.T) {
 	}
 	engine := New(pool, Options{})
 	summary, err := engine.Backfill(ctx, BackfillOptions{Metric: "http2_adoption", Version: 1, Through: &day, MaxDays: 1})
-	if err != nil || summary.Processed != 1 {
-		t.Fatalf("HTTP/2 Metric backfill summary=%+v err=%v", summary, err)
+	if err == nil || !strings.Contains(err.Error(), "not registered or available for this operation") || summary.Processed != 0 {
+		t.Fatalf("retired HTTP/2 Metric accepted backfill: summary=%+v err=%v", summary, err)
+	}
+	// Model the already finalized v1 day; explicit rebuild must retain its original semantics.
+	if _, err := pool.Exec(ctx, `SELECT gfn_project_site_capability_metric_day('http2_adoption',1,$1::date);UPDATE gfn_metric_checkpoints SET processed_through=$1::date WHERE metric_key='http2_adoption' AND metric_version=1`, pgx.QueryExecModeSimpleProtocol, day); err != nil {
+		t.Fatal(err)
 	}
 	rebuilt, err := engine.Rebuild(ctx, "http2_adoption", 1, day, day, 1, false)
 	if err != nil || rebuilt.Processed != 1 {
 		t.Fatalf("HTTP/2 Metric rebuild summary=%+v err=%v", rebuilt, err)
+	}
+	var retiredHistory bool
+	if err := pool.QueryRow(ctx, `SELECT registry.status='retired' AND checkpoint.processed_through=$1::date FROM gfn_metric_registry registry JOIN gfn_metric_checkpoints checkpoint USING(metric_key,metric_version) WHERE metric_key='http2_adoption' AND metric_version=1`, day).Scan(&retiredHistory); err != nil || !retiredHistory {
+		t.Fatalf("rebuild changed v1 retirement/checkpoint: %v", err)
 	}
 	var state string
 	if err := pool.QueryRow(ctx, `SELECT state FROM gfn_metric_entity_daily WHERE metric_key='http2_adoption' AND metric_version=1 AND fact_date=$1 AND site_id=871101`, day).Scan(&state); err != nil || state != "positive" {
