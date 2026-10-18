@@ -27,34 +27,30 @@ html.dark .gf-nav {
   min-height: 52px;
 }
 
-.gf-nav__island::before {
-  content: '';
+.gf-nav__shell {
   position: absolute;
   z-index: -1;
   inset: 0;
-  border: 1px solid var(--gf-nav-border);
   background: var(--gf-nav-bg);
   backdrop-filter: blur(10px);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
-// The rectangular material meets the same SVG interface at x=0 in each cap.
-// Only the outer ends are rounded; no browser-dependent shape() fallback is needed.
-.gf-nav__brand::before { right: 12px; border-right: 0; border-radius: 18px 0 0 18px; }
-.gf-nav__actions::before { left: 12px; border-left: 0; border-radius: 0 18px 18px 0; }
-.gf-nav__seam {
-  position: absolute;
-  z-index: -1;
-  top: 0.5px;
-  width: 12px;
-  height: calc(100% - 1px);
-  overflow: visible;
+// The one full outline clips material, blur and border together. Controls remain
+// unclipped, while transparent cut-outs (including the brand link) pass hits through.
+.gf-nav__island > :not(.gf-nav__shell) { pointer-events: auto; }
+.gf-nav__shell > svg {
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
-.gf-nav__brand > .gf-nav__seam { right: 0; }
-.gf-nav__actions > .gf-nav__seam { left: 0; }
-.gf-nav__seam-fill { fill: var(--gf-nav-bg); }
-.gf-nav__seam-edge { fill: none; stroke: var(--gf-nav-border); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.gf-nav__shell-outline {
+  fill: none;
+  stroke: var(--gf-nav-border);
+  // Clipping removes the outer half, leaving one continuous 1px inner border.
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
 
 @media (min-width: 768px) {
   .gf-nav__island { min-height: 56px; }

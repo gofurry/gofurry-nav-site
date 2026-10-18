@@ -202,32 +202,57 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
     expect(await page.locator('.gf-static-page').evaluate(el => el.getBoundingClientRect().top)).toBe(0)
     expect(await page.locator('.legal-panel').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(width >= 768 ? 88 : 76)
     await expect(nav.locator('.gf-nav__island')).toHaveCount(2)
-    const seams = await nav.locator('.gf-nav__seam-edge').evaluateAll(nodes => {
-      const [left, right] = nodes as SVGPathElement[]
-      const fills = [...document.querySelectorAll<SVGGeometryElement>('.gf-nav__seam-fill')]
-      const points = Array.from({ length: 25 }, (_, index) => index / 24).map(t => {
-        const a = left!.getPointAtLength(t * left!.getTotalLength()), b = right!.getPointAtLength(t * right!.getTotalLength())
-        const am = left!.getScreenCTM()!, bm = right!.getScreenCTM()!
-        return Math.max(Math.abs(a.x * am.a - b.x * bm.a), Math.abs(a.y * am.d - b.y * bm.d))
-      })
-      const complement = Array.from({ length: 24 }, (_, y) => Array.from({ length: 12 }, (_, x) => {
-        const point = new DOMPoint(x + 0.37, y * 2.25 + 0.7)
-        return Number(fills[0]!.isPointInFill(point)) + Number(fills[1]!.isPointInFill(point)) === 1
-      })).flat().every(Boolean)
-      return { sameCurve: left!.getAttribute('d') === right!.getAttribute('d'), error: Math.max(...points), complement,
-        depth: left!.getBBox().width, width: left!.ownerSVGElement!.getBoundingClientRect().width }
-    })
-    expect(seams).toEqual({ sameCurve: true, error: 0, complement: true, depth: 12, width: 12 })
+    const outlines = await nav.locator('.gf-nav__shell-outline').evaluateAll(nodes => nodes.map((node, index) => {
+      const path = node as SVGPathElement, svg = path.ownerSVGElement!
+      const { width: w, height: h } = svg.viewBox.baseVal
+      // Sample the actual full silhouette, rather than assert a particular path string.
+      const edge = (y: number) => {
+        let low = index === 0 ? w - 60 : 0, high = index === 0 ? w : 60
+        for (let n = 0; n < 20; n++) {
+          const mid = (low + high) / 2
+          const inside = path.isPointInFill(new DOMPoint(mid, y))
+          if (inside === (index === 0)) low = mid; else high = mid
+        }
+        return (low + high) / 2
+      }
+      const top = edge(h * 0.1), bottom = edge(h * 0.9)
+      const shell = svg.parentElement!, island = shell.parentElement!
+      const box = island.getBoundingClientRect(), surface = shell.getBoundingClientRect()
+      const voidX = index === 0 ? box.right - 3 : box.left + 3
+      const voidY = index === 0 ? box.bottom - 4 : box.top + 4
+      return { drop: (edge(h * 0.02) - edge(h * 0.98)) * 56 / h,
+        slope: (top - bottom) / (h * 0.8),
+        straightError: Math.max(...[0.25, 0.5, 0.75].map(t => Math.abs(edge(h * t) - (top + (bottom - top) * (t - 0.1) / 0.8)))),
+        fullHeight: path.getBBox().height / h,
+        sized: Math.abs(w - box.width) < 0.1 && Math.abs(h - box.height) < 0.1 && surface.width === box.width && surface.height === box.height,
+        clipped: getComputedStyle(shell).clipPath.startsWith('url('), blur: getComputedStyle(shell).backdropFilter,
+        controlsUnclipped: getComputedStyle(island).clipPath === 'none' && getComputedStyle(island).overflow === 'visible',
+        cutPassesHits: !island.closest('.gf-nav')!.contains(document.elementFromPoint(voidX, voidY)) }
+    }))
+    expect(outlines).toHaveLength(2)
+    for (const shape of outlines) {
+      expect(shape.drop, 'Full-height cut runs from upper right to lower left').toBeGreaterThanOrEqual(28)
+      expect(shape.drop).toBeLessThanOrEqual(36)
+      expect(shape.straightError, 'Middle 80% remains a diagonal straight line').toBeLessThan(0.15)
+      expect(shape.fullHeight).toBeGreaterThan(0.97)
+      expect(shape).toMatchObject({ sized: true, clipped: true, blur: 'blur(10px)', controlsUnclipped: true, cutPassesHits: true })
+    }
+    expect(Math.abs(outlines[0]!.slope - outlines[1]!.slope)).toBeLessThan(0.01)
     const geometry = await nav.evaluate(root => {
       const [brand, actions] = [...root.querySelectorAll('.gf-nav__island')].map(el => el.getBoundingClientRect())
       const hit = document.elementFromPoint((brand!.right + actions!.left) / 2, brand!.top + 16)
       return { gap: actions!.left - brand!.right, through: !root.contains(hit),
         overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth,
         hitSizes: [...root.querySelectorAll<HTMLElement>('.gf-nav__actions a, .gf-nav__actions button')]
-          .filter(el => el.getClientRects().length).every(el => el.offsetWidth >= 40 && el.offsetHeight >= 44) }
+          .filter(el => el.getClientRects().length).every(el => el.offsetWidth >= 40 && el.offsetHeight >= 44),
+        controlsHit: [...root.querySelectorAll<HTMLElement>('.gf-nav__brand, .gf-nav__actions a, .gf-nav__actions button')]
+          .filter(el => el.getClientRects().length).every(el => {
+            const r = el.getBoundingClientRect()
+            return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2))
+          }) }
     })
     expect(geometry.gap).toBeGreaterThanOrEqual(12)
-    expect(geometry).toMatchObject({ through: true, overflow: 0, hitSizes: true })
+    expect(geometry).toMatchObject({ through: true, overflow: 0, hitSizes: true, controlsHit: true })
     if (width >= 768) {
       await navShell.assertLinks('zh')
       await expect(toggle).toBeHidden()
@@ -266,6 +291,11 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
       await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     }
     await navShell.scrollTo(0)
+    if (process.env.GOFURRY_145_A3_REVIEW === '1' && [390, 900, 1440].includes(width)) {
+      await mkdir('../../../.cache/145-a3-review', { recursive: true })
+      await navShell.settle(nav)
+      await page.screenshot({ path: `../../../.cache/145-a3-review/shell-${width}-light.png` })
+    }
     if (process.env.GOFURRY_145_REVIEW === '1') {
       await mkdir('../../../.cache/145-a2-review', { recursive: true })
       await navShell.settle(nav)
@@ -381,6 +411,27 @@ test('145-A rotating an open Bottom Tabs Preferences returns focus to the deskto
   await expect(navShell.nav.locator('.gf-nav__brand')).toBeFocused()
   navShell.assertQuiet()
 })
+
+for (const width of [390, 900, 1440]) {
+  test(`145-A3 full diagonal shells over dark Home at ${width}`, async ({ page, navShell }) => {
+    await navShell.open({ width, theme: 'dark', route: '/' })
+    await navShell.settle(navShell.nav)
+    const brand = navShell.nav.locator('.gf-nav__brand')
+    await brand.focus()
+    await page.keyboard.press('Tab')
+    const focused = navShell.nav.locator(':focus')
+    await expect(focused).toHaveCount(1)
+    await expect(focused).toHaveCSS('outline-width', '2px')
+    await expect(focused).toHaveCSS('outline-style', 'solid')
+    await expect(navShell.nav.locator('.gf-nav__shell')).toHaveCount(2)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0)
+    if (process.env.GOFURRY_145_A3_REVIEW === '1') {
+      await mkdir('../../../.cache/145-a3-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/145-a3-review/home-${width}-dark-focus.png` })
+    }
+    navShell.assertQuiet()
+  })
+}
 
 for (const route of ['/', '/en'] as const) {
   test(`145-A2 inline picker has natural Tab order and responsive cleanup (${route})`, async ({ page, navShell }) => {

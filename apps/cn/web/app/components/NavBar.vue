@@ -2,20 +2,28 @@
   <header ref="navigation" class="gf-nav pointer-events-none absolute inset-x-0 top-0 z-[70] w-full md:fixed"
     :class="{ 'gf-nav--overlay': navOverlayDesktop }" :inert="inactive" :aria-hidden="inactive || undefined">
     <div class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center justify-between gap-3 px-3 py-3 md:px-5 md:py-4 lg:px-6">
-      <NuxtLink :to="localePath('/')" class="gf-nav__island gf-nav__brand pointer-events-auto flex shrink-0 items-center gap-2 px-3 md:px-4"
+      <NuxtLink :to="localePath('/')" class="gf-nav__island gf-nav__brand pointer-events-none flex shrink-0 items-center gap-2 pl-3 pr-8 md:pl-4"
         aria-label="GoFurry" @click="closeMenus()">
-        <svg class="gf-nav__seam" viewBox="0 0 12 56" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-          <path class="gf-nav__seam-fill" :d="islandSeam + ' Z'" />
-          <path class="gf-nav__seam-edge" :d="islandSeam" />
-        </svg>
+        <span class="gf-nav__shell" :style="{ clipPath: `url(#${shellId}-brand)` }" aria-hidden="true">
+          <svg :viewBox="`0 0 ${shellSizes[0].width} ${shellSizes[0].height}`" preserveAspectRatio="none" focusable="false">
+            <defs><clipPath :id="`${shellId}-brand`" clipPathUnits="objectBoundingBox">
+              <path :d="shellPaths[0]" :transform="`scale(${1 / shellSizes[0].width} ${1 / shellSizes[0].height})`" />
+            </clipPath></defs>
+            <path class="gf-nav__shell-outline" :d="shellPaths[0]" />
+          </svg>
+        </span>
         <img :src="logo" alt="" class="h-8 w-8" />
         <span class="gf-nav__brand-text">GoFurry</span>
       </NuxtLink>
-      <div class="gf-nav__island gf-nav__actions pointer-events-auto flex shrink-0 items-center gap-0.5 px-2 lg:gap-1 lg:px-3">
-        <svg class="gf-nav__seam" viewBox="0 0 12 56" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-          <path class="gf-nav__seam-fill" :d="islandSeam + ' L12 56 L12 0 Z'" />
-          <path class="gf-nav__seam-edge" :d="islandSeam" />
-        </svg>
+      <div class="gf-nav__island gf-nav__actions pointer-events-none flex shrink-0 items-center gap-0.5 pl-8 pr-2 lg:gap-1 lg:pr-3">
+        <span class="gf-nav__shell" :style="{ clipPath: `url(#${shellId}-actions)` }" aria-hidden="true">
+          <svg :viewBox="`0 0 ${shellSizes[1].width} ${shellSizes[1].height}`" preserveAspectRatio="none" focusable="false">
+            <defs><clipPath :id="`${shellId}-actions`" clipPathUnits="objectBoundingBox">
+              <path :d="shellPaths[1]" :transform="`scale(${1 / shellSizes[1].width} ${1 / shellSizes[1].height})`" />
+            </clipPath></defs>
+            <path class="gf-nav__shell-outline" :d="shellPaths[1]" />
+          </svg>
+        </span>
         <nav class="gf-nav__links hidden items-center gap-0.5 md:flex lg:gap-1" :aria-label="t('navbar.expandNav')">
           <template v-for="link in navLinks" :key="link.label">
             <a v-if="link.external" :href="link.href" target="_blank" rel="noopener noreferrer"
@@ -98,10 +106,6 @@ import logo from '@/assets/svgs/logo-mini.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
-// One continuous interface: the brand fills its left side, actions its exact complement.
-// Coordinates describe a 12px-deep short face, with a blunt middle and tangent end joins.
-const islandSeam = 'M0 0 C4 0 5 3 7 8 L11 19 Q12 22 12 25 L12 31 Q12 34 11 37 L7 48 C5 53 4 56 0 56'
-
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -112,6 +116,35 @@ defineProps<{ navOverlayDesktop?: boolean, inactive?: boolean }>()
 const emit = defineEmits<{ busy: [value: boolean] }>()
 const menuId = useId()
 const navigation = ref<HTMLElement | null>(null)
+const shellId = useId()
+// A complete diagonal silhouette exists in SSR. Measurement only preserves its
+// pixel radii/slope as content, fonts and viewport change; it never drives layout.
+type ShellSize = { width: number, height: number }
+const shellSizes = ref<[ShellSize, ShellSize]>([{ width: 148, height: 56 }, { width: 400, height: 56 }])
+let shellObserver: ResizeObserver | undefined
+function shellPath(width: number, height: number, brand: boolean) {
+  const left = 0.5, right = width - 0.5, top = 0.5, bottom = height - 0.5
+  const radius = 18, scale = (height - 1) / 55
+  const cut = 32 * scale, corner = 4 * scale, end = 5 * scale, dx = cut * 5 / 55
+  // Both straight edges follow x(y) = x_top - 32*y/55. Only their joins differ.
+  return brand
+    ? `M${left + radius} ${top} H${right - corner} Q${right} ${top} ${right - dx} ${top + end} L${right - cut + dx} ${bottom - end} Q${right - cut} ${bottom} ${right - cut - corner} ${bottom} H${left + radius} Q${left} ${bottom} ${left} ${bottom - radius} V${top + radius} Q${left} ${top} ${left + radius} ${top} Z`
+    : `M${left + cut + corner} ${top} H${right - radius} Q${right} ${top} ${right} ${top + radius} V${bottom - radius} Q${right} ${bottom} ${right - radius} ${bottom} H${left + corner} Q${left} ${bottom} ${left + dx} ${bottom - end} L${left + cut - dx} ${top + end} Q${left + cut} ${top} ${left + cut + corner} ${top} Z`
+}
+const shellPaths = computed(() => shellSizes.value.map((size, index) => shellPath(size.width, size.height, index === 0)))
+onMounted(() => {
+  const islands = [...navigation.value!.querySelectorAll<HTMLElement>('.gf-nav__island')]
+  const measure = () => {
+    shellSizes.value = islands.map(element => {
+      const { width, height } = element.getBoundingClientRect()
+      return { width, height }
+    }) as [ShellSize, ShellSize]
+  }
+  measure()
+  shellObserver = new ResizeObserver(measure)
+  islands.forEach(element => shellObserver!.observe(element))
+})
+onUnmounted(() => shellObserver?.disconnect())
 const menuPanel = ref<HTMLElement | null>(null)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
 const modeReturnFocus = ref<HTMLElement | null>(null)
