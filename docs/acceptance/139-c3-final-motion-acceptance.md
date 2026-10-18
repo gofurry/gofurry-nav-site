@@ -242,3 +242,180 @@ wrap、Stats/News、Similar 与 Search 的真实 Loading/最终页；Compare 快
 **实际 Full/Visual 验证版本为 R，不是 D**；原 Fast 链接仍只对应 S，未将旧 SHA
 门禁冒充新版本。可用 `git diff --name-only ffc59a3a55503f1605330f79c63c38eb5fd843cf HEAD`
 核对 D 的唯一文件变化；S→R 产品源码不变的证据不等于 Visual 已通过。
+
+## C3-R2 Visual 基线协调与最终验收
+
+日期：2026-10-18（Asia/Shanghai）；远端运行时间使用 UTC。此节追加 R2 真实结果，
+保留上文 C3 的 Full 超时和 R1 的 Visual FAIL/BLOCKED 历史，不改写当时结论。
+
+### 授权、版本与修改边界
+
+维护者于 2026-10-18 在本地启动当前前端、审查并明确认可现有外观（“完全没问题，
+可以继续”）。这是当前外观的人工认可；**不代表上文每一项 Normal → Reduced →
+Normal 动态操作均已逐项签核，也不包含关闭 #139 的授权**。
+
+开始时工作区干净，本地 dev、origin/dev 和 GitHub 只读远端查询均为
+`556c1cb8beda76b9b7becd5986881cfea31ab008`。本批 Golden 提交
+**T = `449276518267a8acf1652e490180b2ea6d3b7b71`** 已推回 dev；只改变下列
+13 张原路径 PNG。136 张现有 PNG 清单不变，其他 123 张字节不变；没有产品、
+spec/fixture、容差/mask、工作流、依赖或 lockfile 修改，也没有采样修复。
+S 的产品代码及 R1 四组规则保持原样。没有分支/worktree/PR、合并或部署。
+
+### 逐张诊断与更新
+
+先逐张查看 R1 [artifact 12127081528](https://github.com/gofurry/gofurry-nav-site/actions/runs/39102215213/artifacts/12127081528)
+的 expected/actual/diff，再对照四个既有 Visual owner 和真实 fixture。在 pinned
+容器中独立运行两次原比较：13 张均重现旧 Golden 差异，未出现加载、网络、数据或
+就绪断言失败。以下每张均经过诊断后才由受限更新命令重新生成，未把 artifact actual
+手工写成 Golden。路径前缀为 `apps/cn/nav-web/tests/browser/visual/__snapshots__/`。
+
+| Owner / PNG | 语义及差异检查 | 两次诊断 / 处理 |
+| --- | --- | --- |
+| game-collections.spec.ts / game-collections-index-light-desktop.png | 新搜索/筛选与卡片布局；6 项及空集合计数正确 | 两次及 CI actual 字节一致；更新 |
+| game-collections.spec.ts / game-collections-index-dark-desktop.png | 同上，Dark 材质正确 | 两次及 CI actual 字节一致；更新 |
+| game-collections.spec.ts / game-collection-timeline-light-desktop.png | 新元信息/标签/在线及时间线；11 项顺序、分期和日期正确 | 两次及 CI actual 字节一致；更新 |
+| game-collections.spec.ts / game-collection-timeline-dark-desktop.png | 同上，Dark 桌面蛇形布局正确 | 两次及 CI actual 字节一致；更新 |
+| game-collections.spec.ts / game-collection-timeline-light-mobile.png | 同数据，移动纵向布局和完整内容正确 | 两次及 CI actual 字节一致；更新 |
+| game-collections.spec.ts / game-collection-timeline-dark-mobile.png | 同上，Dark 移动布局正确 | 两次及 CI actual 字节一致；更新 |
+| game-detail.spec.ts / game-detail-insights-light-desktop.png | 差异在标题/数值字形边缘；图表曲线、空值间断、零值/免费与轴正确 | 两次及 CI actual 字节一致；更新 |
+| game-detail.spec.ts / game-detail-insights-dark-desktop.png | 同上；当前 0 / 峰值 120 / 均值 42.5 不变 | 两次及 CI actual 字节一致；更新 |
+| game-detail.spec.ts / game-detail-insights-light-mobile.png | 同数据及曲线，移动布局正确 | 两次及 CI actual 字节一致；更新 |
+| game-detail.spec.ts / game-detail-insights-dark-mobile.png | 同上，Dark 图表/文本完成态正确 | 两次及 CI actual 字节一致；更新 |
+| games-home-closure.spec.ts / games-home-latest-reviews-light-desktop.png | 正文/元信息字形边缘；3 条评论、图片和 5 分钟/2 小时/3 天正确 | 两次及 CI actual 字节一致；更新 |
+| games-home-closure.spec.ts / games-home-latest-reviews-dark-desktop.png | 同上；两次额外差别仅圆角边缘 4 个像素的 RGB 各 1/255 | 原比较器判为一致，详见下文；更新 |
+| nav-home-header.spec.ts / nav-home-quick-sites-modal-desktop.png | 说明/提交文字字形边缘；两项入口、名称错误、输入焦点、位置和材质正确 | 两次及 CI actual 字节一致；更新 |
+
+Collections 的六张采用维护者已批准的新版布局。其余七张不是凭差异面积放行：
+Detail 固定时钟、30d/CN 数据和缺口/零值已核对；Reviews 的 SSR/浏览器时钟一致；
+Quick Sites 已等待 Vue 进入完成、面板 transform 归位，并验证输入焦点和错误文案。
+既有 fixture 等待字体、图片解码、有限动画和 RAF；未发现未完成 Canvas 或过渡残影。
+
+Dark Reviews 两次原始位图在 (23,251)、(24,251)、(23,264)、(24,264) 的 RGB
+各相差 1、alpha 均 255，属于卡片圆角栅格化边缘；第一轮与 CI actual 字节一致。
+使用已安装 Playwright 1.60.0 的原 PNG comparator、原默认参数比较两轮返回 null
+（无判定差异），不涉及文字、数据或布局。**没有新增或放宽容差**；后续生成及两轮
+完整 spec 比较也通过原有断言。不能表述为全部 13 张均字节完全相同。
+
+### 本地 pinned 证据
+
+使用既有镜像
+`mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948`，
+Linux amd64、Node 24.15.0、pnpm 12.6.0、Playwright 1.60.0 / Chromium，保留
+`GOFURRY_VISUAL_ENV=pinned`、单 worker、零 retry。临时容器从冻结 HEAD 的
+git archive 构建，frozen install 和一次生产 Build PASS；未占用或重建维护者本地
+前端的 .nuxt/.output。任务容器已移除，审查产物保留在忽略的
+`.cache/139-c3-r2-review/`（artifact、diag-1/2、stability.json、generated-review.json、
+final-1/2 日志与报告）。
+
+在容器 `/work/apps/cn/nav-web` 实际执行，四个 owner 如下；每轮 output/report
+写入不同的 /review 目录，不影响比较策略：
+
+```sh
+pnpm exec playwright test --config=playwright.visual.config.ts \
+  tests/browser/visual/game-collections.spec.ts \
+  tests/browser/visual/game-detail.spec.ts \
+  tests/browser/visual/games-home-closure.spec.ts \
+  tests/browser/visual/nav-home-header.spec.ts --workers=1 \
+  -g 'Game Collections|Detail Insights|Latest Reviews|Quick Sites validation'
+# 上述原比较独立执行两轮，均重现旧基线 13 FAIL；完成逐项诊断后：
+pnpm run test:visual:update -- game-collections.spec.ts
+pnpm run test:visual:update --grep 'Detail Insights|Latest Reviews|Quick Sites validation' \
+  -- game-detail.spec.ts games-home-closure.spec.ts nav-home-header.spec.ts
+# 最终将第一条命令去掉 -g 筛选，连续两次非更新比较四个完整 owner。
+```
+
+| 检查 | 实际结果 |
+| --- | --- |
+| 更新前两次定向诊断 | 各 13 FAIL，均为旧 Golden 差异；作为诊断历史保留 |
+| Collections 受限更新 | PASS 6/6，16.7s |
+| 其他七张受限更新 | PASS 7/7，20.6s |
+| 最终四个 spec 非更新比较 1 | PASS 36/36，1.3m |
+| 最终四个 spec 非更新比较 2 | PASS 36/36，1.2m |
+| 原路径 PNG 清单 / 变更白名单 / git diff --check | PASS，136 张清单中只变更批准的 13 张 |
+| 额外产品审计、全仓库 Go/DB、无关本地测试 | NOT RUN，按范围不执行 |
+
+首次更新命令遗漏 `--` 分隔符，Playwright 把 spec 名解析为可选的 snapshot mode，
+在测试启动前报参数错误，未写入 Golden；改用上述文档规定的调用格式后成功，
+未改环境守卫或 runner。没有用失败重试、更换断言或扩大更新清单掩盖问题。
+
+### 当前 T 的远端门禁与停止原因
+
+仅 dispatch 一次 Full，触发前及完成后只读确认远端 dev=T。Full
+[39107101290](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290)
+**PASS**，`headSha=T`，2026-10-18 07:17:22–07:27:40Z。四组使用同次
+`nav-web-full-output-449276518267a8acf1652e490180b2ea6d3b7b71` 构建产物；
+下列通过数来自作业实际日志，耗时包含准备和清理。
+
+| Job | 结果 / 数量 | 作业耗时 |
+| --- | --- | --- |
+| [nav-web-build](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117615244744) | PASS | 1m56s |
+| [games](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117615597599) | PASS / 217 | 6m17s |
+| [sites-other](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117615597549) | PASS / 293 | 6m48s |
+| [insights-core](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117615597534) | PASS / 214 | 4m50s |
+| [insights-nav](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117615597518) | PASS / 292 | 8m10s |
+| [nav-web-image](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117615597555) | PASS，push:false | 4m01s |
+| [nav-web-full-gate](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290/job/117617111363) | PASS | 3s |
+
+总计 **1016/1016 PASS**，四组均在原 10m 预算内，无重试。该结果不覆盖下面
+独立的 repository-policy 失败。
+
+T 的 push 自动触发 [engineering-foundation 39107076666](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666)，
+整体 **FAIL**。其中 [nav-web-fast](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666/job/117615203456)
+和 [nav-web 汇总](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666/job/117615809377)
+**PASS**，但 [repository-policy](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666/job/117615203458)
+**FAIL**（07:17:11–07:17:33Z）：
+
+```text
+--- FAIL: TestFrontendFullCIKeepsCompleteGroupsAndExactBuildSource
+frontend_ci_test.go:167: Full must run all fixed groups
+```
+
+只读定位：`tools/check-production-policy/frontend_ci_test.go:166` 仍要求
+`games, sites-other, insights-nav` 三组，而 R1 的 Full 矩阵已为含
+`insights-core` 的四组。R1 的 [自动运行 39101568396](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101568396)
+也有同一断言失败；这两个源文件在本批均未改变。此为现存跨守卫契约不同步，
+不是本次 PNG 更新证明出的产品回归，也不能忽略为已通过。
+
+最小复现入口为在 `tools/` 执行
+`go test ./check-production-policy -run '^TestFrontendFullCIKeepsCompleteGroupsAndExactBuildSource$'`。
+本批**未执行**本地 Go 测试、未修守卫或工作流；证据直接来自上述 CI 日志
+（忽略缓存 `fast.json`、`fast-failed.log`）。失败不涉及浏览器截图，无失败截图
+可提供，以上作业链接即最小定位证据。
+
+R2 冻结实施文档第 3 节明确将“某个远端门禁失败”列为停止条件，因此发现自动
+门禁失败后只等待已启动的 Full 结束取证，没有 dispatch Visual。T 的远端 Visual
+为 **NOT RUN**，没有 T 的 Visual run URL；不得用 R1 的 124/137 或本地 36/36
+替代 T 的远端全量验收。没有自动重试、改阈值、跳过失败或擅自扩大到 Go/CI 修复。
+
+实际远端命令及取证入口：
+
+```sh
+gh workflow run nav-web-full.yml --repo gofurry/gofurry-nav-site --ref dev
+gh run view 39107101290 --repo gofurry/gofurry-nav-site --json headSha,status,conclusion,url,jobs
+gh run view 39107076666 --repo gofurry/gofurry-nav-site --log-failed
+```
+
+### R2 结论、遗留事项与文档提交
+
+**BLOCKED — Full PASS / engineering-foundation FAIL（Nav Web Fast PASS） /
+Visual NOT RUN / HUMAN VISUAL REVIEW ACKNOWLEDGED / ISSUE CLOSE AUTHORIZATION PENDING。**
+
+13 张更新和本地两轮原断言验证已完成；最终远端 Visual 尚待阻断解除后的明确
+后续范围。上文 Hero 中间帧、通用 Modal、移动 Footer 等既有边界不因本批消失。
+维护者当前外观认可已记录，不代签未明确反馈的逐项动态清单。
+
+本节为独立 documentation-only 提交 D2，父提交为 T，唯一修改是本验收文件的
+R2 追加段；**门禁实际验证版本是 T，不是 D2**。D2 的路径选择/跳过结果不能证明
+上述 Go 守卫问题已解决，可用 `git diff --name-only 449276518267a8acf1652e490180b2ea6d3b7b71 HEAD`
+核对文档提交边界。原 C3/R1 记录保持原文；没有关闭或评论 #139。
+
+### 更新后的关闭评论草稿（未发布；当前仍不可用于关闭）
+
+> #139 的 A–C2 已完成局部 Motion 治理与 Reduced Motion 生命周期修复，继续使用
+> Vue Transition + Less + useReducedMotion，没有引入新动画库。维护者于 2026-10-18
+> 认可当前本地外观；C3-R2 在 pinned 环境精确协调 13 张 Golden，四个 Visual owner
+> 两轮各 36/36 PASS。验收版本为 449276518267a8acf1652e490180b2ea6d3b7b71，
+> [Full](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290) 1016/1016 PASS。
+> [基础门禁](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666)
+> 因旧三组 Go 守卫与四组矩阵不一致失败，远端 Visual NOT RUN，当前仍 BLOCKED。
+> 待明确授权处理阻断并完成后续远端 Visual 后，再取得独立关闭授权；#139 保持 Open。
