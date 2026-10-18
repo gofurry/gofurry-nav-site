@@ -163,7 +163,7 @@ func TestFrontendFullCIKeepsCompleteGroupsAndExactBuildSource(t *testing.T) {
 	if group.Needs != "nav-web-build" || group.Container.Image != playwrightImage || group.Timeout != 10 || group.Strategy.FailFast {
 		t.Fatal("every Full group must consume the common pinned build and run independently")
 	}
-	if !slices.Equal(group.Strategy.Matrix.Group, []string{"games", "sites-other", "insights-nav"}) {
+	if !slices.Equal(group.Strategy.Matrix.Group, []string{"games", "sites-other", "insights-core", "insights-nav"}) {
 		t.Fatal("Full must run all fixed groups")
 	}
 	requireCIAction(t, group, "actions/checkout@", "ref", "${{ needs.nav-web-build.outputs.source_sha }}")
