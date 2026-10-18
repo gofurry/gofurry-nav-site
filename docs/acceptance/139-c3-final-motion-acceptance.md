@@ -137,3 +137,108 @@ pnpm exec playwright test "${specs[@]}" --workers=1
 > 超时取消，最终 Gate FAIL；Visual NOT RUN。结论 BLOCKED。
 > 维护者人工动态视觉签核及关闭授权 PENDING，因此当前保持 Open，不能关闭。
 > 全部门禁与人工授权齐备后可在 dev 关闭，无需等待合并 main 或生产部署。
+
+## C3-R1 修复与复验
+
+日期：2026-10-18（Asia/Shanghai）；下列运行时间使用 UTC。本节为 R1 最新结论，
+上文 S 的原始 Full `39059292625` 超时取消、Gate 失败和 BLOCKED 历史原样保留。
+
+### 版本、范围与本地验证
+
+开始时本地 `dev`、远端 `dev` 均为 `d73970d830dd623cbf7d23df5f39fa247d688a5f`，
+工作区干净。R = **`ffc59a3a55503f1605330f79c63c38eb5fd843cf`**，已提交并推回 dev。
+两次 dispatch 前均确认远端 dev=R；Full 完成后才触发 Visual，二者 `headSha`
+均为 R。没有竞争中的同 ref 工作流，没有重试或重复 dispatch。
+
+R 仅修改以下六个文件：
+
+- `.github/scripts/nav-web-regression-groups.mjs`：按冻结顺序将 Changes、Compare、
+  Domain、Entity、Navigation 五个 owner 移到新增 `insights-core`，同步 CLI Usage。
+- `.github/scripts/nav-web-regression-groups.test.mjs`：保护四组顺序、精确成员及原有分类错误检查。
+- `.github/workflows/nav-web-full.yml`：仅矩阵加入 `insights-core`。
+- `contracts/nav-web-frontend.md`、`apps/cn/nav-web/AGENTS.md`、`docs/frontend/testing.md`：
+  同步现行四组契约与容量重平衡说明；没有改写 #134 历史测量。
+
+Games 14、Sites/Other 15、Insights Core 5、Insights/Nav 13 个 spec，共 47 个，
+各归属一次；保留组成员及相对顺序不变。10m job 预算、单 worker、零 retry、
+同 SHA 单次构建、pinned 环境和原 aggregate 判断均未改。
+
+本地只执行以下清单验证：守卫 **PASS 8/8**，两个 CLI 清单 **PASS（5 / 13）**。
+守卫同时验证全部四组 CLI、遗漏/重复/失效路径/空组/非法组名；未硬编码用例数。
+
+```sh
+node --test .github/scripts/nav-web-regression-groups.test.mjs
+node .github/scripts/nav-web-regression-groups.mjs insights-core
+node .github/scripts/nav-web-regression-groups.mjs insights-nav
+```
+
+范围审计和 `git diff --check` PASS。S→R 的 `apps/cn/nav-web/app`、
+`apps/cn/nav-web/tests/browser`、Visual workflow 差异为空：产品源码、全部
+Browser spec/fixture、Visual Golden 与 S 一致。没有运行本地 Build、Full、Visual、
+全量 lint/typecheck 或 Go/DB；没有改变 Browser 测试行为、断言、依赖或超时。
+
+### 同 R 远端结果
+
+Full [39101604530](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530)：
+**PASS**，headSha=R，workflow_dispatch/dev；2026-10-18 05:44:48–05:54:47Z。
+四组使用同次 `nav-web-full-output-ffc59a3a55503f1605330f79c63c38eb5fd843cf` 产物。
+下表耗时包含准备/清理；计数取自各组实际 Playwright 日志。
+
+| Job | 结果 / 通过数 | UTC 起止 | 作业耗时 |
+| --- | --- | --- | --- |
+| [nav-web-build](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117598844736) | PASS | 05:44:52–05:46:44 | 1m52s |
+| [games](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117599183886) | PASS / 217 | 05:46:46–05:53:00 | 6m14s |
+| [sites-other](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117599183805) | PASS / 293 | 05:46:46–05:52:02 | 5m16s |
+| [insights-core](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117599183851) | PASS / 214 | 05:46:46–05:52:19 | 5m33s |
+| [insights-nav](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117599183854) | PASS / 292 | 05:46:46–05:54:42 | 7m56s |
+| [nav-web-image](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117599183812) | PASS，push:false | 05:46:46–05:48:43 | 1m57s |
+| [nav-web-full-gate](https://github.com/gofurry/gofurry-nav-site/actions/runs/39101604530/job/117600512164) | PASS | 05:54:43–05:54:46 | 3s |
+
+全部 1016 项通过，无取消、异常跳过或重试，四组都在原 10m 预算内完成。
+这解除原 Full 分组容量阻断；不能代替后置 Visual。
+
+Visual [39102215213](https://github.com/gofurry/gofurry-nav-site/actions/runs/39102215213)：
+**FAIL**，headSha=R，workflow_dispatch/dev；2026-10-18 05:55:24–06:02:37Z。
+[nav-web-visual job](https://github.com/gofurry/gofurry-nav-site/actions/runs/39102215213/job/117600633566)
+05:55:31–06:02:37Z（7m06s）；Build PASS，原 `pnpm run test:visual` 比较
+**124 passed / 13 failed**（共 137，测试耗时 5.3m），退出码 1。Golden 更新数 0。
+
+### Visual 阻断证据与待处理项
+
+失败均来自现有 `toHaveScreenshot`，不是本次 Full 超时：
+
+| 现有 Visual owner | 失败范围 | 日志可确认的差异 |
+| --- | --- | --- |
+| `game-collections.spec.ts` | Light/Dark 的 index-desktop、timeline-desktop、timeline-mobile，共 6 | Index 高 992→944；Timeline 桌面 2809→3146、移动 4011→4671，伴随像素差异 |
+| `game-detail.spec.ts` | Detail Insights，Light/Dark × Desktop/Mobile，共 4 | 分别 233、46、218、60 像素差异 |
+| `games-home-closure.spec.ts` | Latest Reviews Light/Dark Desktop，共 2 | 831 / 1399 像素差异 |
+| `nav-home-header.spec.ts` | Quick Sites validation Desktop，共 1 | 622 像素差异 |
+
+完整 [Visual failure artifact（12127081528）](https://github.com/gofurry/gofurry-nav-site/actions/runs/39102215213/artifacts/12127081528)
+名为 `nav-web-visual-failure`，保留 7 天，包含 HTML 报告、expected/actual/diff PNG、
+error-context 与 trace。可从 `playwright-visual-report/index.html` 定位全部 13 项；
+例如 `visual-test-results/nav-home-header-Nav-Home-Quick-Sites-validation-desktop-visual-chromium/`
+下的 `nav-home-quick-sites-modal-desktop-diff.png` 对应最后一项。
+日志/元数据副本在忽略的 `.cache/139-c3-r1-review/`；没有把诊断产物写入 Golden。
+
+最小后续排查单位是上述四个现有 Visual owner；应在 R 和相同 pinned 环境下，
+先核对 artifact 的 expected/actual/diff 与既有设计验收来源。根因尚未区分为产品
+缺陷、已接受设计与基线不一致或环境因素，不能因 Full 通过或像素差异小而豁免。
+本批已停止，不重跑、不更新 PNG、不改断言或产品。任何修复/基线处置需另行授权。
+
+### R1 当前结论与文档提交
+
+**BLOCKED — Full PASS / Visual FAIL / HUMAN VISUAL PENDING。**
+未达到 `ENGINEERING ACCEPTED`；Issue #139 保持 Open，没有发布关闭评论。
+没有创建 PR、切 main、合并或部署。
+
+维护者动态清单沿用上文：1440 Light / 390 Dark，同页 Normal → Reduced → Normal；
+Nav 搜索/设置/菜单/快捷弹层的快速开关与焦点，Reveal/Spotlight；Games Home
+wrap、Stats/News、Similar 与 Search 的真实 Loading/最终页；Compare 快速加删与
+键盘。人工签核仍 PENDING，Visual CI 及 Agent 不代签。新增的四类截图差异需要
+维护者另行确定诊断/修复范围，不能直接关闭议题。
+
+本节以独立 documentation-only 提交 D 追加，父提交为 R，D 只改变本验收文件。
+**实际 Full/Visual 验证版本为 R，不是 D**；原 Fast 链接仍只对应 S，未将旧 SHA
+门禁冒充新版本。可用 `git diff --name-only ffc59a3a55503f1605330f79c63c38eb5fd843cf HEAD`
+核对 D 的唯一文件变化；S→R 产品源码不变的证据不等于 Visual 已通过。
