@@ -60,7 +60,7 @@ func validateTaskfile(data []byte) []string {
 	expected := map[string]string{
 		"nav-backend": "gf-nav", "nav-collector": "gf-nav-collector",
 		"game-backend": "gf-game", "game-collector": "gf-game-collector",
-		"admin": "gofurry-admin", "uptime": "gf-uptime",
+		"admin": "gofurry-admin",
 	}
 	var aggregate []string
 	for _, command := range document.Tasks["build"].Cmds {
@@ -69,7 +69,7 @@ func validateTaskfile(data []byte) []string {
 		aggregate = append(aggregate, strings.TrimPrefix(name, "build:"))
 	}
 	if len(aggregate) != len(expected) {
-		problems = append(problems, "release aggregate must contain six Go targets")
+		problems = append(problems, "release aggregate must contain five Go targets")
 	}
 	for module, artifact := range expected {
 		if !slices.Contains(aggregate, module) {

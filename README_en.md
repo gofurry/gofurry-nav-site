@@ -33,7 +33,7 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 - `apps/cn/game-backend`: game API
 - `apps/cn/game-collector`: Steam/game data collection
 - `apps/cn/admin`: management service with an embedded frontend
-- `apps/cn/uptime`: independent availability observer backed by local Bbolt
+- Availability: independent [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0; the former service is archived in `legacy/gf-uptime` and excluded from active builds
 
 `apps/intl` is placeholder-only. `legacy`, `experimental`, and `third-party` are outside the active build, CI, and production deployment graph. `db/game`, `db/nav`, and `db/admin` own Goose migrations for `gfg`, `gfn`, and `gfa`.
 
@@ -106,7 +106,7 @@ task build
 ```
 
 Use `task verify` on a fresh checkout: it prepares Admin embed output before Go
-checks/tests. `task build` produces only the six Go artifacts under `build/`,
+checks/tests. `task build` produces only the five Go artifacts under `build/`,
 including Admin's `dist/` companion. Nav Web has separate `task build:nav-web`
 and `task build:nav-web-image` commands. Each frontend owns a pnpm lockfile;
 there is no root workspace. Task never loads root `.env` or operates deployments
@@ -115,7 +115,7 @@ or databases. See [Local development](./docs/development.md) and the
 
 ## Deployment and Operations
 
-Nav Web follows the Docker workflow in its [deployment guide](./apps/cn/web/DEPLOYMENT.md). The six Go binaries provide built-in Linux/systemd `install --config <file>` and `uninstall` commands; installation enables the unit but never starts it.
+Nav Web follows the Docker workflow in its [deployment guide](./apps/cn/web/DEPLOYMENT.md). The five Go binaries provide built-in Linux/systemd `install --config <file>` and `uninstall` commands; installation enables the unit but never starts it.
 
 Database migration and binary deployment are separate operator actions. Applications never run Goose at startup. See:
 

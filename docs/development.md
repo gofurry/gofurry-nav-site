@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.26.9 for all six active Go modules and `tools`
+- Go 1.26.9 for all five active Go modules and `tools`
 - Task >=3.45.3 (built-in file utilities on Windows)
 - Node.js 24 and pnpm 12.6.0 for `apps/cn/web` and `apps/cn/admin/react`
 - development PostgreSQL and Redis matching the selected app configuration
@@ -43,8 +43,8 @@ work with Task's root-file discovery from a subdirectory.
 | `task doctor`, `task doctor:docker` | Read-only toolchain check; Docker is optional for the base doctor |
 | `task deps`, `task deps:admin`, `task deps:nav-web` | Always run frozen installs; no node_modules existence shortcut |
 | `task dev:nav-web`, `task dev:admin-web` | Start one frontend development server |
-| `task dev:nav-backend`, `task dev:nav-collector`, `task dev:game-backend`, `task dev:game-collector`, `task dev:admin-api`, `task dev:uptime` | Start one Go service using its existing local YAML; fail if config is absent |
-| `task fmt`, `task check:fmt` | Write/check Go formatting for six modules plus tools |
+| `task dev:nav-backend`, `task dev:nav-collector`, `task dev:game-backend`, `task dev:game-collector`, `task dev:admin-api` | Start one Go service using its existing local YAML; fail if config is absent |
+| `task fmt`, `task check:fmt` | Write/check Go formatting for five modules plus tools |
 | `task lint`, `task lint:go`, `task lint:admin`, `task lint:nav-web` | Go vet, Admin lint, Nav ESLint/Stylelint/style policy |
 | `task typecheck`, `task typecheck:admin`, `task typecheck:nav-web` | Frontend typing |
 | `task test`, `task test:go`, `task test:admin`, `task test:nav-web` | Ordinary local tests; no integration configuration is supplied |
@@ -54,8 +54,8 @@ work with Task's root-file discovery from a subdirectory.
 | `task check` | Formatting, lint, typing, policy and sqlc; no source changes |
 | `task verify` | Frozen deps → frontend builds → check → test → ordinary Go builds |
 | `task verify:frontend-build`, `task verify:go-build` | Individual local build checks |
-| `task build` | Exactly six Linux/amd64 Go release artifacts |
-| `task build:nav-backend`, `task build:nav-collector`, `task build:game-backend`, `task build:game-collector`, `task build:admin`, `task build:uptime` | Individual release artifacts |
+| `task build` | Exactly five Linux/amd64 Go release artifacts |
+| `task build:nav-backend`, `task build:nav-collector`, `task build:game-backend`, `task build:game-collector`, `task build:admin` | Individual release artifacts |
 | `task build:nav-web`, `task build:nav-web-image` | Separate Nuxt production build / Docker image build only |
 | `task clean` | Root `build/` only; preserves configs, dependencies, lockfiles and package store |
 
@@ -116,7 +116,6 @@ Every runtime command requires an explicit YAML file:
 | Game Backend | `apps/cn/game-backend/conf/server.example.yaml` |
 | Game Collector | `apps/cn/game-collector/conf/server.example.yaml` |
 | Admin | `apps/cn/admin/config/server.example.yaml` |
-| Uptime | `apps/cn/uptime/conf/server.example.yaml` |
 
 Copy the example to an ignored local file, replace placeholders, and never commit credentials.
 
@@ -178,7 +177,7 @@ After a Nav Web production build and `pnpm exec playwright install chromium`, `p
 
 ## Normal validation
 
-For each of `game-collector`, `game-backend`, `nav-collector`, `nav-backend`, `admin`, and `uptime` under `apps/cn`:
+For each of `game-collector`, `game-backend`, `nav-collector`, `nav-backend`, and `admin` under `apps/cn`:
 
 ~~~bash
 gofmt -w .
@@ -221,6 +220,6 @@ go tool govulncheck -C ../apps/cn/nav-backend ./...
 
 Database integration checks require explicitly configured, isolated development databases. Never point them at production.
 
-The standalone uptime service has no PostgreSQL integration suite. Its tests use temporary Bbolt files. Collector health listeners are disabled when `health` is omitted; example configs bind them to loopback addresses.
+LibreCosta Uptime is maintained in its [independent repository](https://github.com/librecosta/uptime); archived `legacy/gf-uptime` is not a local build or test target. Collector health listeners are disabled when `health` is omitted; example configs bind them to loopback addresses.
 
 For Admin Collaboration Center development, run the isolated `TestAdminCollaborationThreeDatabase` test in addition to React lint/typecheck/test/build and Admin Go/sqlc checks. Migrations `20260926000000` and `20260926010000` change only GFA; regenerate the expected-final fixture through db-baseline, never rewrite the historical baseline. See [Collaboration Center verification](collaboration-center.md).

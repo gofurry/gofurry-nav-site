@@ -5,5 +5,5 @@
 - Admin `GET /startupz` reports completion of Admin bootstrap separately from liveness and readiness.
 - Collector health listeners are internal operational interfaces. When enabled, they bind to loopback or a private address and are not exposed publicly by default.
 - Failure of an external collection target does not make a locally healthy Collector unready. Target failures remain visible through collection results and logs.
-- `gf-uptime` is an independent observer backed by a durable local Bbolt file, with no external/business Redis runtime dependency. Its readiness covers its own HTTP and Bbolt runtime, not the health of monitored targets.
-- Public external monitoring observes `gf-uptime`; `gf-uptime` observes the configured application endpoints. Monitoring must not create a dependency from business services back to the observer.
+- [LibreCosta Uptime](https://github.com/librecosta/uptime) is the independent public observer. Its implementation, storage and readiness contract belong to that repository; `legacy/gf-uptime` is archived, not a GoFurry runtime target.
+- Public external monitoring observes LibreCosta Uptime; LibreCosta Uptime observes the configured application endpoints. Monitoring must not create a dependency from business services back to the observer.

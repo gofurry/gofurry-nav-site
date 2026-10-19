@@ -10,12 +10,19 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
+- Add trustworthy HTTP/2 adoption v2 based on an H2-enabled probe profile, final HTTPS protocol and TLS ALPN evidence. Retire adoption v1 and HTTP/2 transition v1 while preserving historical metrics, events, checkpoints and explicit historical evaluators; no transition v2 is introduced (#92-A).
+- Add reasoned Site archival to Admin: active/archived filtering, historical-domain lookup and read-only archived details. Keep soft deletion, transactional Audit, Collector exclusion and all historical evidence; do not invent reasons for old archived records.
+- Establish a shared Motion Contract with local Reduced Motion handling for Nav, Preferences, Games pagination and Insights Compare, including runtime preference changes and timer/RAF cleanup (#139).
 - Add hybrid Game Collection membership: effective members combine OR-matched active Tag rules and manual pins, minus explicit exclusions. Share this read model across Public and Admin, preserving Adult filtering, chronology and paused rules without materializing automatic members (#144).
 - Add Admin automation controls for Tag bindings, member sources, pin/exclude overrides and complete Composition saves. Preserve shared-version conflict protection, IME-safe search, 20-item local pagination and existing temporarily ineligible Home placements (#144).
 - Add backward-compatible Insights visual projections for automatically qualified Game artwork and Site logos, with conservative content filtering, asset identity checks and deterministic daily Game rotation. Keep data-only and image-failure fallbacks; qualification does not imply manual review of individual assets (#108).
 
 ### Changed
 
+- Rename the Nuxt workspace from `apps/cn/nav-web` to `apps/cn/web`, updating engineering paths and Admin's shared icon import. Preserve the `nav-web` Compose project, runtime service/image identity and CI names; make the build-only Node heap configurable with a 4096 MiB default.
+- Introduce the accepted floating twin-island navigation, Phosphor icons, responsive mobile handoff and integrated lottery/search/feedback utilities. Refine the inline mobile platform picker and page-local navigation clearance without changing search or routing semantics (#145).
+- Render actual Nav Home cards and groups in SSR, restore natural scrolling and normal-flow Footer, and retire Reveal locks/prewarm coupling and the mobile Footer hydration exception. Make Site Detail tabs scroll normally and add handle-only Pointer/keyboard shortcut sorting with cancellation and focus restoration (#145).
+- Reconcile #145 Visual owners and 94 reviewed PNGs in the pinned Linux environment, preserving 42 unchanged baselines. Complete the independent local compare and 137-case remote Visual comparison; the final Full Gate remains pending as documented in the [C2 ledger](docs/acceptance/145-c2-integration-final-acceptance.md).
 - Align all six production Go modules and the tools module on Go 1.26.9, with `golang.org/x/net` v0.60.0 and its required transitive updates to address security findings.
 - Add root `.go-version` and `.node-version` discovery hints, validate them through repository tooling, and share the Node 24 declaration across GitHub Actions while preserving module-owned Go versions and independent pnpm projects.
 - Recompose the Insights Overview into an editorial data Hero, paired ecosystem showcases, compact activity feed and six-topic exploration directory. Retain two independently handled parallel Overview SSR requests, localized routes, metric coverage, fact dates and percentage-point changes (#108).
@@ -26,14 +33,25 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Explicitly enable HTTP/2 negotiation in Nav Collector's existing transport, remove the conflicting static Connection header and retain final-response evidence through Facts (#92-A).
+- Try `/security.txt` once when the well-known path returns 200 HTML, accepting only a fully valid fallback; otherwise preserve the original invalid evidence. Keep `body_truncated` in Facts and synchronize HTTP/2 registry/checkpoint expectations (#92-C).
+- Correct obsolete Taskfile policy names and #145 regression contracts for icon navigation, responsive Preferences ownership, intentional Local Hero handoff and virtual-clock/network ordering without weakening error assertions. Repair Collections control clearance and mobile picker breakpoint focus.
+- Refine Footer copyright presentation and prevent native Hero image dragging (#146).
 - Run vulnerability checks for all six production modules even when an earlier scan fails, then report every result and retain a nonzero exit status for failures.
 - Model the game trailer fixture's HTTP 503 media cancellation by exact request identity and terminal event, preserving successful playback, Gallery unmount cancellation and error recovery checks without broadly ignoring browser errors.
 - Bind Overview Game Hero artwork to positive entity facts for the exact selected metric, version and fact date; fall back to data-only presentation when proof is absent or mismatched. Keep ordinary ecosystem artwork independent and exclude the displayed Hero game from its thumbnails (#108).
 - Deduplicate ecosystem metrics against their respective Hero selections, retain real zero values and unknown states, and remove the unused Overview Game Home Panel request (#108).
 - Unify the two Overview Hero surfaces and remove excess borders and whitespace above the Site Domain and certificate data disclosures, retaining native disclosure controls, explanatory content and the Footer (#108).
 
+### Removed
+
+- Retire the in-repository GoFurry Uptime service to `legacy/gf-uptime`, preserving its source/module/examples/history. Remove its active Task, module, CI and vulnerability-scan membership; the remaining five Go services retain their engineering contracts. Independent [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0 now owns public status through `librecosta-uptime.service`; the repository maintenance proxy uses `127.0.0.1:18580`.
+
 ### Upgrade notes
 
+- HTTP/2 v2 and Site archival require their pending GFN migrations and matching Collector/Admin releases under separate production authorization. Preserve v1 history; choose the first complete UTC day after migration and new-Collector validation as the HTTP/2 v2 cutover. See [HTTP/2 acceptance](docs/acceptance/92-a-http2-probe-metric-v2.md) and [Site archival acceptance](docs/acceptance/admin-site-archival-foundation.md).
+- For the frontend workspace move, preserve ignored `.env`/`.env.next`, confirm Compose project `nav-web` and follow the [deployment handoff](apps/cn/web/DEPLOYMENT.md). Deployment must use a branch containing the accepted changes; pulling default `main` does not import `dev`. Do not force builds on memory-constrained production hosts.
+- Uptime production migration is already complete per maintainer confirmation: the old unit is stopped/disabled and old history needs no migration. This archival change does not operate production or change Nav Web's status URL. At the maintainer's request, no builds, tests, lint, formatting checks or CI queries/runs were performed for this cleanup; the commit remains local without push.
 - Apply pending GFG migration `20261008010000_game_collection_hybrid_membership.sql` before deploying Game Backend and Admin with its rebuilt embedded React frontend. No GFA/GFN migration, runtime configuration change, Nav Web or Collector update is required. The internal Collection Redis namespace advances to v3; old keys expire naturally (#144).
 
 ## v3.0.0-alpha.11 - 2026-10-07

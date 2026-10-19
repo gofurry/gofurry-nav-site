@@ -8,7 +8,6 @@ vars:
     - apps/cn/game-backend
     - apps/cn/game-collector
     - apps/cn/admin
-    - apps/cn/uptime
     - tools
 
 tasks:
@@ -89,14 +88,8 @@ tasks:
       - task: _serve
         vars: {MODULE: admin, CONFIG: config/server.yaml}
 
-  dev:uptime:
-    desc: Serve standalone Uptime with its explicit local YAML
-    cmds:
-      - task: _serve
-        vars: {MODULE: uptime, CONFIG: conf/server.yaml}
-
   fmt:
-    desc: Format the six Go modules and tools
+    desc: Format the five Go modules and tools
     cmds:
       - for: {var: GO_MODULES}
         cmd: gofmt -w '{{.ITEM}}'
@@ -114,7 +107,7 @@ tasks:
       - task: lint:web
 
   lint:go:
-    desc: Vet the six Go modules and tools (requires Admin embed output)
+    desc: Vet the five Go modules and tools (requires Admin embed output)
     cmds:
       - task: _admin-embed-present
       - for: {var: GO_MODULES}
@@ -161,7 +154,7 @@ tasks:
       - task: test:web
 
   test:go:
-    desc: Test the six Go modules and tools without enabling integration configs
+    desc: Test the five Go modules and tools without enabling integration configs
     cmds:
       - task: _admin-embed-present
       - for: {var: GO_MODULES}
@@ -249,14 +242,13 @@ tasks:
         cmd: go -C '{{.ITEM}}' build ./...
 
   build:
-    desc: Build the six Linux/amd64 Go release artifacts
+    desc: Build the five Linux/amd64 Go release artifacts
     cmds:
       - task: build:nav-backend
       - task: build:nav-collector
       - task: build:game-backend
       - task: build:game-collector
       - task: build:admin
-      - task: build:uptime
 
   build:nav-backend:
     desc: Build build/gf-nav/gf-nav
@@ -293,12 +285,6 @@ tasks:
         vars: {MODULE: admin, ARTIFACT: gofurry-admin}
       - mkdir -p build/gofurry-admin/dist
       - cp -R apps/cn/admin/internal/transport/http/webui/dist/. build/gofurry-admin/dist/
-
-  build:uptime:
-    desc: Build build/gf-uptime/gf-uptime
-    cmds:
-      - task: _release
-        vars: {MODULE: uptime, ARTIFACT: gf-uptime}
 
   build:web:
     desc: Install and build Nav Web separately from the Go release

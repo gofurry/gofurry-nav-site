@@ -1,17 +1,21 @@
 package main
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
-func TestProductionModulesIncludeStandaloneUptime(t *testing.T) {
-	if len(productionModules) != 6 {
-		t.Fatalf("production module count = %d, want 6", len(productionModules))
+func TestProductionModulesMatchActiveServices(t *testing.T) {
+	want := []string{
+		"apps/cn/admin",
+		"apps/cn/game-backend",
+		"apps/cn/game-collector",
+		"apps/cn/nav-backend",
+		"apps/cn/nav-collector",
 	}
-	for _, module := range productionModules {
-		if module == "apps/cn/uptime" {
-			return
-		}
+	if !slices.Equal(productionModules, want) {
+		t.Fatalf("production modules = %v, want %v", productionModules, want)
 	}
-	t.Fatal("apps/cn/uptime is missing from the production policy")
 }
 
 func TestArchiveToolingPathBoundaries(t *testing.T) {

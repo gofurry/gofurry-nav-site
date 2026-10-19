@@ -19,7 +19,7 @@ func TestTaskfileReleaseContract(t *testing.T) {
 	for _, mutation := range []struct{ name, from, to string }{
 		{"syntax", "tasks:", "tasks: ["},
 		{"dotenv", "tasks:", "dotenv: [.env]\ntasks:"},
-		{"target removed", "- task: build:uptime", "- task: build:nav-web"},
+		{"target removed", "- task: build:nav-collector", "- task: build:nav-web"},
 		{"wrong architecture", "GOARCH=amd64", "GOARCH=arm64"},
 		{"flags lost", "-trimpath", ""},
 		{"artifact renamed", "ARTIFACT: gf-nav}", "ARTIFACT: other}"},

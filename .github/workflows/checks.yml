@@ -294,7 +294,7 @@ jobs:
           set -euo pipefail
           failed=0
           results=()
-          for module in admin game-backend game-collector nav-backend nav-collector uptime; do
+          for module in admin game-backend game-collector nav-backend nav-collector; do
             echo "govulncheck apps/cn/${module}"
             if go tool govulncheck -C "../apps/cn/${module}" ./...; then
               results+=("${module}: PASS")

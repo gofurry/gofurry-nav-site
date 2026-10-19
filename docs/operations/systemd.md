@@ -1,6 +1,6 @@
 # Linux/systemd lifecycle
 
-The six active Go binaries generate their deployment-specific unit at install time. There are no canonical static production `.service` files in this repository.
+The five active Go binaries generate their deployment-specific unit at install time. There are no canonical static production `.service` files in this repository.
 
 ## Service names
 
@@ -11,7 +11,8 @@ The six active Go binaries generate their deployment-specific unit at install ti
 | `gf-game` | `gf-game.service` |
 | `gf-game-collector` | `gf-game-collector.service` |
 | `gofurry-admin` | `gofurry-admin.service` |
-| `gf-uptime` | `gf-uptime.service` |
+
+Public status is provided by [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0, managed as `librecosta-uptime.service` on `127.0.0.1:18580`. Its installation/lifecycle belongs to that project, not the commands below. The retired `gf-uptime.service` is already stopped and disabled; no historical-data migration is required.
 
 ## Install contract
 
@@ -78,4 +79,4 @@ sudo ./gf-nav uninstall
 
 Uninstall stops the unit if active, disables it if enabled, removes only `/etc/systemd/system/gf-nav.service`, reloads systemd, and resets failed state where applicable. Repeating it for an already stopped, disabled, or absent unit is safe.
 
-It never deletes the binary, configuration, logs, working directory, PostgreSQL state, Redis state, the uptime Bbolt file, or other application data.
+It never deletes the binary, configuration, logs, working directory, PostgreSQL state, Redis state, or other application data.

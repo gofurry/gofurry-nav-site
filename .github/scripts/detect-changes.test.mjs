@@ -64,18 +64,18 @@ test('database ownership includes Admin and the correct consumers', () => {
 test('Task and CI changes retain broad build coverage; SQL tooling remains conservative', () => {
   for (const path of ['Taskfile.yml', '.github/workflows/checks.yml', '.github/workflows/nav-web-full.yml', '.github/workflows/nav-web-visual.yml', '.github/workflows/future.yaml', '.github/scripts/detect-changes.mjs', '.github/scripts/nav-web-regression-groups.mjs']) {
     const gates = detectChanges([path])
-    assert.equal(gates.modules.length, 6)
+    assert.equal(gates.modules.length, 5)
     assert.equal(gates.policy && gates.nav_web, true)
   }
   for (const path of ['sqlc.yaml', 'tools/check-sqlc/main.go', 'tools/db-baseline/main.go', 'tools/go.mod', 'tools/future-tool/main.go']) {
     const gates = detectChanges([path])
-    assert.equal(gates.modules.length, 6)
+    assert.equal(gates.modules.length, 5)
     assert.equal(gates.foundation && gates.game_integration && gates.nav_integration && gates.admin_integration, true)
   }
 })
 
 test('archived and placeholder trees never select production gates', () => {
-  const gates = detectChanges(['legacy/nav/package.json', 'experimental/monitor/main.go', 'third-party/lib/main.go', 'apps/intl/README.md'])
+  const gates = detectChanges(['legacy/nav/package.json', 'legacy/gf-uptime/go.mod', 'legacy/gf-uptime/main.go', 'experimental/monitor/main.go', 'third-party/lib/main.go', 'apps/intl/README.md'])
   for (const [name, value] of Object.entries(gates)) {
     if (name === 'modules') assert.deepEqual(value, [])
     else assert.equal(value, false, name)
@@ -84,7 +84,7 @@ test('archived and placeholder trees never select production gates', () => {
 
 test('root version declarations select their consumers without database suites', () => {
   const go = detectChanges(['.go-version'])
-  assert.equal(go.modules.length, 6)
+  assert.equal(go.modules.length, 5)
   assert.equal(go.policy && go.vulnerability, true)
   assert.equal(go.nav_web, false)
   const node = detectChanges(['.node-version'])

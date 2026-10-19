@@ -177,7 +177,7 @@ Keep the existing `nav.go-furry.com` and `game.go-furry.com` API server blocks u
 
 ## Maintenance page
 
-Planned maintenance only places GoFurry business hosts into maintenance mode. `status.go-furry.com` remains live and continues proxying the independent `gf-uptime` service. The canonical maintenance config preserves its separate HTTP redirect and HTTPS proxy to `http://127.0.0.1:9980`.
+Planned maintenance only places GoFurry business hosts into maintenance mode. `status.go-furry.com` remains live and continues proxying the independent [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0 service (`librecosta-uptime.service`). The canonical maintenance config preserves its separate HTTP redirect and HTTPS proxy to `http://127.0.0.1:18580`.
 
 For planned downtime, switch nginx to the dedicated maintenance config instead of letting requests fail against stopped services:
 

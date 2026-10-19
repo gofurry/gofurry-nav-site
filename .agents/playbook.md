@@ -8,7 +8,7 @@ local tests and native Go builds. Building Admin first supplies its embed files
 on a clean checkout. `task check` never formats or generates source; it requires
 installed dependencies and the Admin embed output. `task fmt` and
 `task generate:sqlc` are explicit mutations. `task test` excludes Browser/Visual;
-use the frontend guide for those gates. `task build` creates the six Linux/amd64
+use the frontend guide for those gates. `task build` creates the five Linux/amd64
 artifacts; `task build:nav-web-image` only builds the separate image. See
 `docs/development.md` for the complete task surface and boundaries.
 
@@ -34,7 +34,7 @@ artifacts; `task build:nav-web-image` only builds the separate image. See
 
 ## Active Go checks
 
-For each of `apps/cn/game-collector`, `apps/cn/game-backend`, `apps/cn/nav-collector`, `apps/cn/nav-backend`, `apps/cn/admin`, and `apps/cn/uptime`:
+For each of `apps/cn/game-collector`, `apps/cn/game-backend`, `apps/cn/nav-collector`, `apps/cn/nav-backend`, and `apps/cn/admin`:
 
 ~~~text
 gofmt -w .
@@ -116,7 +116,7 @@ Run these only against explicitly isolated development PostgreSQL. Never use pro
 
 Run the pinned vulnerability scanner from `tools` for every active module. CI performs the same active-only matrix on dependency changes and on a schedule.
 
-Availability smoke checks include Nav Web `/healthz`, backend/Admin readiness, both enabled collector readiness listeners, and the standalone uptime service `/livez`, `/readyz`, and `/uptime`. Uptime does not participate in sqlc, Goose, or PostgreSQL integration jobs.
+Availability smoke checks include Nav Web `/healthz`, backend/Admin readiness and both enabled collector readiness listeners. The status service is the independent [LibreCosta Uptime](https://github.com/librecosta/uptime) project; its operations follow that repository and are outside GoFurry builds, tests, sqlc and Goose.
 
 The tested CI matrix in `.github/scripts/detect-changes.mjs` keeps `db/game` on both Game services and Admin, `db/nav` on both Nav services and Admin, and `db/admin` on Admin. SQL/runtime tooling changes run all SQL consumers; standalone doctor/policy/formatting checks do not start application/database suites. Archive and experiment trees are never production CI inputs. Daily dev/PR `nav-web` requires Fast static/unit/Nuxt/build and Smoke in one pinned job. Full runs on main/manual/nightly dev with three explicit regression groups; its image gate is main/manual only. Visual comparison is manual-only. See [frontend testing](../docs/frontend/testing.md#ci-tiers-134).
 

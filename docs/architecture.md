@@ -2,7 +2,7 @@
 
 ## Active topology
 
-Production code is limited to six Go services plus one Nuxt frontend under `apps/cn`:
+Production code is limited to five Go services plus one Nuxt frontend under `apps/cn`:
 
 | Application | Responsibility | Stateful dependencies |
 |---|---|---|
@@ -11,7 +11,6 @@ Production code is limited to six Go services plus one Nuxt frontend under `apps
 | `game-backend` | Game HTTP API | `gfg` PostgreSQL, existing Redis keys |
 | `game-collector` | Steam/game collection and operator one-shot commands | `gfg` PostgreSQL, existing Redis keys |
 | `admin` | Embedded Admin UI and management API | explicit `gfa`, `gfn`, and `gfg` PostgreSQL pools plus Redis |
-| `uptime` | Independent public availability history and status UI | local Bbolt file only |
 | `web` | Production Nuxt frontend (Nav Web) | Nav and Game APIs |
 
 `apps/intl` contains placeholders only. It has no build, CI, deployment, database, or runtime ownership.
@@ -24,17 +23,17 @@ Normal business SQL is declared in service-local sqlc query files and generated 
 
 Admin writes business data through explicit `gfn` or `gfg` pools and records authentication/audit state in `gfa`. No distributed transaction across the three databases is implied.
 
-`uptime` does not own a schema and is deliberately absent from Goose and sqlc. Fiber uptime history is stored in its local Bbolt file; it does not depend on business PostgreSQL or Redis.
+Availability is owned by the independent [LibreCosta Uptime](https://github.com/librecosta/uptime) project, outside this repository's Goose/sqlc and runtime graph. The old implementation is archived in `legacy/gf-uptime`.
 
 ## Availability boundaries
 
-Planned maintenance keeps `status.go-furry.com` proxying independent `gf-uptime` while business hosts serve the maintenance page.
+Planned maintenance keeps `status.go-furry.com` proxying LibreCosta Uptime at `127.0.0.1:18580` while business hosts serve the maintenance page.
 
 - Nav Web exposes dependency-free `GET /healthz`.
 - Nav/Game Backend and Admin retain their existing health endpoints.
 - Nav/Game Collector expose optional internal `net/http` `/livez` and `/readyz` listeners only during scheduled `serve`.
 - Collector readiness covers only local PostgreSQL, required Redis, scheduler initialization, and shutdown state.
-- `uptime` owns the public status UI and should preferably run outside the business host's failure domain. A cloud HTTP monitor should probe the status service itself.
+- LibreCosta Uptime v0.1.0 owns the public status UI via `librecosta-uptime.service`; the old `gf-uptime.service` is stopped and disabled. Business services retain their health endpoints and never depend on the observer.
 
 ## Managed Asset Delivery
 

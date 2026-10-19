@@ -15,7 +15,7 @@ Nuxt now provides `apps/cn/web/app/error.vue`, so unknown frontend routes render
 
 ## Maintenance Mode
 
-Planned maintenance only places GoFurry business hosts into maintenance mode. `status.go-furry.com` remains live and continues proxying the independent `gf-uptime` service. The canonical config includes separate status HTTP-to-HTTPS and HTTPS proxy blocks, forwarding to `http://127.0.0.1:9980`; no runtime block injection is needed.
+Planned maintenance only places GoFurry business hosts into maintenance mode. `status.go-furry.com` remains live and continues proxying the independent [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0 service (`librecosta-uptime.service`). The canonical config includes separate status HTTP-to-HTTPS and HTTPS proxy blocks, forwarding to `http://127.0.0.1:18580`; no runtime block injection is needed.
 
 `ops/nginx/nginx.maintenance.conf` is a full nginx config for planned downtime. It serves the static page at:
 

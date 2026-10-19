@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; implementation updated 2026-10-20: public availability is now owned by [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0. The former module is archived in `legacy/gf-uptime`; the current active set contains five Go modules. The original decision below is retained as historical context.
 
 ## Context
 

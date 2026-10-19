@@ -17,7 +17,6 @@ var productionModules = []string{
 	"apps/cn/game-collector",
 	"apps/cn/nav-backend",
 	"apps/cn/nav-collector",
-	"apps/cn/uptime",
 }
 
 const requiredGoVersion = "1.26.9"
@@ -147,7 +146,7 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	fmt.Println("production repository policy passed for six Go modules")
+	fmt.Println("production repository policy passed for five Go modules")
 }
 
 func checkProductionTooling(repositoryRoot string) ([]finding, error) {

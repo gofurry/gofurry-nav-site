@@ -1,7 +1,7 @@
 import { appendFileSync, readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
-const modules = ['game-collector', 'game-backend', 'nav-collector', 'nav-backend', 'admin', 'uptime']
+const modules = ['game-collector', 'game-backend', 'nav-collector', 'nav-backend', 'admin']
 const documentation = path => /(^|\/)(README(?:_[\w-]+)?\.md|AGENTS\.md)$/i.test(path)
   || /^(docs\/|contracts\/|\.agents\/|CHANGELOG\.md$)/.test(path)
   || /^apps\/cn\/[^/]+\/docs\//.test(path)
@@ -33,7 +33,7 @@ export function detectChanges(paths) {
     game_integration: sql || adminBackend || has(/^(apps\/cn\/game-(backend|collector)\/|db\/game\/)/),
     nav_integration: sql || adminBackend || has(/^(apps\/cn\/nav-(backend|collector)\/|db\/nav\/)/),
     admin_integration: sql || adminBackend || has(/^db\/(admin|game|nav)\//),
-    vulnerability: ci || goVersion || has(/^(apps\/cn\/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)\/go\.(mod|sum)$|tools\/go\.(mod|sum)$)/),
+    vulnerability: ci || goVersion || has(/^(apps\/cn\/(admin|game-backend|game-collector|nav-backend|nav-collector)\/go\.(mod|sum)$|tools\/go\.(mod|sum)$)/),
   }
 }
 

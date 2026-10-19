@@ -4,7 +4,7 @@ For alpha.8 → alpha.9, follow the [release-specific upgrade guide](releases/v3
 
 ## Build ownership
 
-From a Windows, Linux or macOS release workspace, `task build` builds only the six
+From a Windows, Linux or macOS release workspace, `task build` builds only the five
 active Linux/amd64 Go binaries with `CGO_ENABLED=0`, `-trimpath` and
 `-ldflags="-s -w"`. Individual targets use `task build:<target>`:
 
@@ -15,7 +15,6 @@ active Linux/amd64 Go binaries with `CGO_ENABLED=0`, `-trimpath` and
 | `game-backend` | `build/gf-game/gf-game` |
 | `game-collector` | `build/gf-game-collector/gf-game-collector` |
 | `admin` | `build/gofurry-admin/gofurry-admin` |
-| `uptime` | `build/gf-uptime/gf-uptime` |
 
 Admin's embedded web UI is built before its binary. `apps/cn/web` has a separate pnpm/Docker deployment flow described in its local `DEPLOYMENT.md`.
 
@@ -52,31 +51,14 @@ Applications never run Goose during startup. Do not run a migration merely becau
 
 ## Availability operation
 
-Prefer running `gf-uptime` on a small host outside the business host's failure domain. It can run on the same host when necessary, but its runtime must still use only its local Bbolt file.
+Public availability has moved to [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0. It runs as `librecosta-uptime.service` on `127.0.0.1:18580`; `status.go-furry.com` already points to that service. Deployment, configuration and upgrades belong to the independent repository.
 
-- Keep endpoint IDs stable and store the Bbolt file at a durable absolute path writable by the service user.
-- Expose the status UI through Nginx while keeping the application listener local to its host.
-- Bind Collector health listeners only to loopback or private addresses; one-shot Game commands remain listener-free.
-- Set Nav Web `NUXT_PUBLIC_UPTIME_URL` to the independent public status origin.
-- Use an external HTTP monitor for the public `gf-uptime` readiness endpoint.
+The former `gf-uptime.service` is stopped and disabled. Its source is preserved in `legacy/gf-uptime`, excluded from GoFurry builds and scans. Old history does not need migration; this repository cleanup performs no production operations.
 
-On the status host, the relevant Nginx locations are intentionally small:
-
-~~~nginx
-location = / {
-    return 302 /uptime;
-}
-
-location / {
-    proxy_pass http://127.0.0.1:9980;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-~~~
-
-Terminate TLS using the host's existing certificate workflow. If uptime runs on a separate host, replace collector/backend loopback endpoint URLs with reachable private or HTTPS health URLs; never expose collector listeners publicly merely to make status polling work.
+- Preserve the existing Nav Web status-page links and `NUXT_PUBLIC_UPTIME_URL`.
+- Keep backend/Admin health routes and Collector loopback/private readiness listeners unchanged.
+- The repository maintenance config keeps the independent status virtual host live while business hosts serve the maintenance page. Its status upstream is `http://127.0.0.1:18580`; certificates and other proxies are unchanged.
+- Follow the independent project's endpoint and storage contract rather than the archived Fiber/Bbolt documentation. Never expose Collector listeners publicly merely to make polling work.
 
 ## Deployment boundaries
 

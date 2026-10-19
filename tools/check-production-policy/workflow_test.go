@@ -179,7 +179,7 @@ func TestSecurityScansEveryModuleBeforeFailing(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/fail=%t", owner.file, fail), func(t *testing.T) {
 				stub := "go() { printf 'VISIT:%s\\n' \"$4\"; "
 				if fail {
-					stub += "case \"$4\" in */admin) return 3;; */game-collector) return 2;; */uptime) return 1;; esac; "
+					stub += "case \"$4\" in */admin) return 3;; */game-collector) return 2;; */nav-collector) return 1;; esac; "
 				}
 				stub += "return 0; }\n"
 				command := exec.Command(bash, "-s")
@@ -201,7 +201,7 @@ func TestSecurityScansEveryModuleBeforeFailing(t *testing.T) {
 					}
 					name := filepath.Base(module)
 					result := "PASS"
-					if fail && (name == "admin" || name == "game-collector" || name == "uptime") {
+					if fail && (name == "admin" || name == "game-collector" || name == "nav-collector") {
 						result = "FAIL"
 					}
 					if !strings.Contains(text, name+": "+result) {

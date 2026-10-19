@@ -33,7 +33,7 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 - `apps/cn/game-backend`：兽游 API
 - `apps/cn/game-collector`：Steam/兽游数据采集
 - `apps/cn/admin`：嵌入前端的管理服务
-- `apps/cn/uptime`：使用本地 Bbolt 的独立可用性观测服务
+- 可用性监控：独立项目 [LibreCosta Uptime](https://github.com/librecosta/uptime) v0.1.0；旧源码归档于 `legacy/gf-uptime`，不参与本仓库活跃构建
 
 `apps/intl` 仅是国际站占位。`legacy`、`experimental` 和 `third-party` 不在活跃构建、CI 或生产部署图中。`db/game`、`db/nav` 和 `db/admin` 分别管理 `gfg`、`gfn` 和 `gfa` 的 Goose migrations。
 
@@ -90,7 +90,7 @@ cp conf/server.example.yaml conf/server.yaml
 go run . serve --config conf/server.yaml
 ```
 
-六个 Go 程序的根命令只显示帮助；运行服务必须显式使用 `serve --config <file>`。示例配置只用于复制，不要提交真实密钥或凭据。
+五个 Go 程序的根命令只显示帮助；运行服务必须显式使用 `serve --config <file>`。示例配置只用于复制，不要提交真实密钥或凭据。
 
 日常开发时，应用代码始终在开发者电脑运行；可通过 Tailscale 连接共享开发 PostgreSQL 和 Redis。私有本机连接值放在被忽略的根目录 `.env` 中，由 Codex、Goose 和本地配置维护流程使用，应用不会自动加载它。runtime `server.yaml` 必须使用 `gofurry_app`（PostgreSQL 与 Redis ACL），Goose 则仅使用 `gofurry_migrator`。
 
@@ -106,14 +106,14 @@ task build
 ```
 
 首次检出使用 `task verify`，它会先准备 Admin embed 产物，再执行检查和测试。
-`task build` 仅构建六个活跃 Go 应用，产物输出到根目录 `build/`，Admin 保留配套 `dist/`。
+`task build` 仅构建五个活跃 Go 应用，产物输出到根目录 `build/`，Admin 保留配套 `dist/`。
 Nav Web 使用独立的 `task build:nav-web` / `task build:nav-web-image`。
 两个前端各有 pnpm lockfile，没有根 workspace；Task 不加载根 `.env`，也不提供部署或数据库操作。
 完整命令见 [本地开发文档](./docs/development.md) 和 [Agent playbook](./.agents/playbook.md)。
 
 ## 部署与运维
 
-Nav Web 使用 [前端部署说明](./apps/cn/web/DEPLOYMENT.md) 中的 Docker 流程。六个 Go 二进制使用内置的 Linux/systemd `install --config <file>` 和 `uninstall`；`install` 只 enable，不会启动服务。
+Nav Web 使用 [前端部署说明](./apps/cn/web/DEPLOYMENT.md) 中的 Docker 流程。五个 Go 二进制使用内置的 Linux/systemd `install --config <file>` 和 `uninstall`；`install` 只 enable，不会启动服务。
 
 数据库 migration 与二进制部署是独立的运维操作，应用启动时不执行 Goose。详见：
 
