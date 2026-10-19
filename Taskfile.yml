@@ -32,7 +32,7 @@ tasks:
     desc: Install both independent frontend lockfiles, sequentially
     cmds:
       - task: deps:admin
-      - task: deps:nav-web
+      - task: deps:web
 
   deps:admin:
     desc: Install the frozen Admin frontend dependencies
@@ -40,7 +40,7 @@ tasks:
     cmds:
       - pnpm install --frozen-lockfile
 
-  deps:nav-web:
+  deps:web:
     desc: Install the frozen Nav Web dependencies and prepare Nuxt
     dir: apps/cn/web
     cmds:
@@ -52,7 +52,7 @@ tasks:
     cmds:
       - pnpm run dev
 
-  dev:nav-web:
+  dev:web:
     desc: Start the Nav Web Nuxt development server
     dir: apps/cn/web
     cmds:
@@ -111,7 +111,7 @@ tasks:
     cmds:
       - task: lint:go
       - task: lint:admin
-      - task: lint:nav-web
+      - task: lint:web
 
   lint:go:
     desc: Vet the six Go modules and tools (requires Admin embed output)
@@ -126,7 +126,7 @@ tasks:
     cmds:
       - pnpm run lint
 
-  lint:nav-web:
+  lint:web:
     desc: Run Nav Web ESLint, Stylelint and style policy gates
     dir: apps/cn/web
     cmds:
@@ -139,7 +139,7 @@ tasks:
     desc: Typecheck both frontends
     cmds:
       - task: typecheck:admin
-      - task: typecheck:nav-web
+      - task: typecheck:web
 
   typecheck:admin:
     desc: Typecheck Admin React
@@ -147,7 +147,7 @@ tasks:
     cmds:
       - pnpm run typecheck
 
-  typecheck:nav-web:
+  typecheck:web:
     desc: Typecheck Nav Web
     dir: apps/cn/web
     cmds:
@@ -158,7 +158,7 @@ tasks:
     cmds:
       - task: test:go
       - task: test:admin
-      - task: test:nav-web
+      - task: test:web
 
   test:go:
     desc: Test the six Go modules and tools without enabling integration configs
@@ -173,7 +173,7 @@ tasks:
     cmds:
       - pnpm test
 
-  test:nav-web:
+  test:web:
     desc: Run Nav Web Unit, Nuxt, Insights and SEO contract tests
     dir: apps/cn/web
     cmds:
@@ -182,7 +182,7 @@ tasks:
       - pnpm run insights:semantics
       - pnpm run seo:recovery:test
 
-  test:nav-web:browser:
+  test:web:browser:
     desc: Run production Browser tests serially (build and Chromium required)
     dir: apps/cn/web
     cmds:
@@ -300,18 +300,18 @@ tasks:
       - task: _release
         vars: {MODULE: uptime, ARTIFACT: gf-uptime}
 
-  build:nav-web:
+  build:web:
     desc: Install and build Nav Web separately from the Go release
     cmds:
-      - task: deps:nav-web
+      - task: deps:web
       - task: _frontend-build
         vars: {FRONTEND: web}
 
-  build:nav-web-image:
+  build:web-image:
     desc: Build the Nav Web production Docker image without starting containers
     dir: apps/cn/web
     cmds:
-      - docker build --tag gofurry-nav-web:latest .
+      - docker build --tag gofurry-web:latest .
 
   clean:
     desc: Remove only the root release artifact directory
