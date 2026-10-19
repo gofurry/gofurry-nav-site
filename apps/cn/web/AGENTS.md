@@ -215,12 +215,13 @@ deployment image verification runs on main/manual Full only. Visual is manual-on
 Use `--workers=1` locally; do not run Full locally merely to validate CI wiring.
 See the testing guide's #134 tier contract and measured acceptance record.
 
-`assertHeroHydration` is the sole narrow mobile Home Footer-debt check. It defaults
-to `/`; only the English Home fixture explicitly opts into `/en`. Require one
-initial mismatch, width <768, SSR Footer=0/client Footer=1, retained SSR Hero and
-no other errors. Preserve raw evidence and reject later errors. Never change
-generic browser-error capture to ignore hydration. See the
-[owned runtime follow-up](../../../docs/acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01).
+After #145-B, `assertHeroHydration` requires actual SSR Footer/content, the retained
+SSR Hero and zero hydration/browser errors in both locales at every width. The
+old mobile Footer waiver is retired; never suppress hydration errors. See the
+[B acceptance record](../../../docs/acceptance/145-b-hero-scroll-content-readiness.md).
+After #145-C1, desktop public navigation owns the shared prize/search/feedback
+utilities; Home/Game side Docks are retired. Keep directory loading on search-open,
+mobile handoff unchanged, and the geometry/focus/network checks in existing owners.
 
 `visual:guard` and the migrated legacy runtime runners are retired. Their source
 checks belong to style-policy; browser behavior to Playwright Test; accepted

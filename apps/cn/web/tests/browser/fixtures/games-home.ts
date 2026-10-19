@@ -350,7 +350,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as Element & { __vue_app__?: unknown })?.__vue_app__))
         await expect.poll(() => page.locator('html').evaluate(element => element.classList.contains('dark'))).toBe(theme === 'dark')
         const root = page.locator('.games-page'), groups = root.locator('.game-info-group'), stats = root.locator('.game-stats-section')
-        const sidebar = root.locator('.game-sidebar-shell'), dock = root.locator('.game-tool-dock')
+        const sidebar = root.locator('.game-sidebar-shell'), dock = page.locator('.gf-nav__utilities')
         const group = (index: number) => groups.nth(index)
         const cards = (index: number) => group(index).locator('.game-group-page-live .game-card')
         await expect(groups).toHaveCount(4)
@@ -445,12 +445,11 @@ export async function assertGamesHomeAppearance(scene: GamesHomeScene) {
     color: dark ? 'rgba(203, 213, 225, 0.62)' : 'rgba(120, 83, 53, 0.58)' })
   await css(sidebar, { 'background-color': 'rgba(0, 0, 0, 0)', 'background-image': 'none',
     'border-width': '0px', 'border-radius': '0px', 'box-shadow': 'none', 'backdrop-filter': 'none' })
-  for (const target of [dock.locator('.game-tool-button'), dock.locator('.game-tool-feedback')]) {
-    await css(target, { 'background-color': dark ? 'rgba(15, 23, 42, 0.76)' : 'rgba(255, 255, 255, 0.7)',
-      'border-color': dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.55)', 'border-radius': '10.4px',
-      'box-shadow': dark ? 'rgba(2, 6, 23, 0.28) 0px 12px 32px 0px' : 'rgba(76, 42, 18, 0.14) 0px 12px 32px 0px',
-      'backdrop-filter': 'blur(18px)', color: dark ? 'rgb(219, 228, 240)' : 'rgb(51, 65, 85)' })
-  }
+  await expect(scene.page.locator('.game-tool-dock')).toHaveCount(0)
+  await expect(dock.locator('.gf-nav__utility-row > a, .gf-nav__utility-row > button')).toHaveCount(3)
+  await css(scene.page.locator('.gf-nav__actions > .gf-nav__shell:visible'), {
+    'background-color': dark ? 'rgba(15, 22, 33, 0.97)' : 'rgba(24, 33, 47, 0.96)',
+    'border-width': '0px', 'box-shadow': 'none', 'background-image': 'none', 'backdrop-filter': 'blur(10px)' })
   await assertStatsAppearance(scene)
 }
 

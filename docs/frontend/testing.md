@@ -19,11 +19,11 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
-## Floating navigation shell (#145-A)
+## Floating navigation shell (#145-A/B/C1)
 
 #145-B supersedes the historical Reveal/prewarm and Footer mismatch allowances
 in the phase-labelled sections below. `nav-revealed-content` now verifies real
-SSR nodes, natural wheel/touch/keyboard scrolling and geometry-driven ToolDock;
+SSR nodes and natural wheel/touch/keyboard scrolling;
 its historical `reveal()` helper only positions the test viewport. Header/Shell
 and localized smoke retain strict request ledgers, zero hydration errors and
 SSR Hero retention, including 390/640/767/768/1440px. The
@@ -38,12 +38,19 @@ Site Shell checks sticky clearance. These use the existing Nitro fixtures and
 request ledgers. #145-A2 replaces the Sheet assertions with actual inline Picker
 slot order/exchange, category centering/overflow, provider URLs, cancellation,
 instant removal, natural Tab order and live Reduced Motion. Shell also verifies
-both SVG edges share one curve and their fills are complementary, alongside
-responsive cleanup and both locales.
+the #145-C1 opposite straight cuts, unclipped focus/hit testing, a continuous
+lower tier beneath the last four actions, and the three midpoint-aligned tools.
+Brand top-position hysteresis defers hiding while focused. `nav-revealed-content`
+owns lazy directory/cache/filter/recent-site/no-view-POST behavior, search focus,
+instant exit and live Reduced interruption. `nav-utilities.nuxt.test.ts` covers
+pending-request invalidation, locale/mode changes and unmount. Home Header owns
+desktop group offset and measured hint clearance; Games Home verifies migrated
+prize/feedback links and absence of the old Dock. Mobile behavior remains covered.
 Review captures may be written to root `.cache/145-a2-review/`
 with `GOFURRY_145_REVIEW=1`; they are not Golden or human acceptance.
-Existing Nav Shell/full-page Visual pixels and old flag/control assertions await
-#145-C; #145-A does not authorize snapshot updates or broader Reveal/SSR changes.
+C1 screenshots use root `.cache/145-c1-review/` with `GOFURRY_145_C1_REVIEW=1`.
+Existing Nav Shell/full-page Visual pixels await #145-C2; C1 does not authorize
+snapshot updates. See the [C1 record](../acceptance/145-c1-twin-island-utility.md).
 
 ## Games Home optional recovery (#140-C follow-up)
 

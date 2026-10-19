@@ -4,9 +4,7 @@
       :desktop-object-key="navPageData.desktopObjectKey"
       :mobile-object-key="navPageData.mobileObjectKey"
     />
-    <NavToolDock v-if="dockActive" />
     <div
-        ref="contentRef"
         class="nav-content-shell relative z-10 flex-1 overflow-hidden"
     >
       <NavTransitionBar :initial-saying="navPageData.saying" />
@@ -25,12 +23,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getNavHome } from '~/services/nav'
 import type { Delay, Group, NavHomeSpotlight, SayingModel } from '~/types/nav'
 import NavHeader from '@/components/nav/NavHeader.vue'
-import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
 import { heroPreferenceKey } from '~/utils/heroPreferences'
@@ -44,8 +41,6 @@ interface NavPageData {
   pingData: Record<string, Delay>
 }
 
-const dockActive = ref(false)
-const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
 
 function parsePingData(data: Record<string, string | undefined>) {
@@ -101,31 +96,4 @@ const { data } = await useAsyncData<NavPageData>(
 
 const navPageData = computed(() => data.value!)
 
-// Observe natural scrolling only; mounting, Footer and Search need no reveal state.
-let scrollFrame: number | null = null
-let desktopQuery: MediaQueryList | null = null
-
-function syncDock() {
-  scrollFrame = null
-  dockActive.value = Boolean(desktopQuery?.matches && contentRef.value
-    && contentRef.value.getBoundingClientRect().top <= window.innerHeight / 2)
-}
-
-function scheduleDockSync() {
-  if (scrollFrame === null) scrollFrame = requestAnimationFrame(syncDock)
-}
-
-onMounted(() => {
-  // Match the existing NavToolDock CSS breakpoint.
-  desktopQuery = window.matchMedia('(min-width: 1024px)')
-  window.addEventListener('scroll', scheduleDockSync, { passive: true })
-  window.addEventListener('resize', scheduleDockSync)
-  syncDock()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', scheduleDockSync)
-  window.removeEventListener('resize', scheduleDockSync)
-  if (scrollFrame !== null) cancelAnimationFrame(scrollFrame)
-})
 </script>

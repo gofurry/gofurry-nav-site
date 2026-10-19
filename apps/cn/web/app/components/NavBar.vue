@@ -3,25 +3,26 @@
     :class="{ 'gf-nav--overlay': navOverlayDesktop }" :inert="inactive" :aria-hidden="inactive || undefined">
     <div class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center justify-between gap-3 px-3 py-3 md:px-5 md:py-4 lg:px-6">
       <NuxtLink :to="localePath('/')" class="gf-nav__island gf-nav__brand pointer-events-none flex shrink-0 items-center gap-2 pl-3 pr-8 md:pl-4"
-        aria-label="GoFurry" @click="closeMenus()">
-        <span class="gf-nav__shell" :style="{ clipPath: `url(#${shellId}-brand)` }" aria-hidden="true">
+        :class="{ 'gf-nav__brand--away': brandAway }" :inert="brandAway" :aria-hidden="brandAway || undefined"
+        aria-label="GoFurry" @focusout="scheduleBrandSync" @click="closeMenus()">
+        <span class="gf-nav__shell absolute inset-0" :style="{ clipPath: `url(#${shellId}-brand)` }" aria-hidden="true">
           <svg :viewBox="`0 0 ${shellSizes[0].width} ${shellSizes[0].height}`" preserveAspectRatio="none" focusable="false">
             <defs><clipPath :id="`${shellId}-brand`" clipPathUnits="objectBoundingBox">
               <path :d="shellPaths[0]" :transform="`scale(${1 / shellSizes[0].width} ${1 / shellSizes[0].height})`" />
             </clipPath></defs>
-            <path class="gf-nav__shell-outline" :d="shellPaths[0]" />
           </svg>
         </span>
         <img :src="logo" alt="" class="h-8 w-8" />
         <span class="gf-nav__brand-text">GoFurry</span>
       </NuxtLink>
       <div class="gf-nav__island gf-nav__actions pointer-events-none flex shrink-0 items-center gap-0.5 pl-5 pr-2 lg:gap-1 lg:pr-3">
-        <span class="gf-nav__shell" :style="{ clipPath: `url(#${shellId}-actions)` }" aria-hidden="true">
-          <svg :viewBox="`0 0 ${shellSizes[1].width} ${shellSizes[1].height}`" preserveAspectRatio="none" focusable="false">
-            <defs><clipPath :id="`${shellId}-actions`" clipPathUnits="objectBoundingBox">
-              <path :d="shellPaths[1]" :transform="`scale(${1 / shellSizes[1].width} ${1 / shellSizes[1].height})`" />
+        <span v-for="desktop in [false, true]" :key="String(desktop)"
+          class="gf-nav__shell absolute inset-x-0 top-0" :class="desktop ? '-bottom-11 hidden md:block' : 'bottom-0 md:hidden'"
+          :style="{ clipPath: `url(#${shellId}-actions-${desktop})` }" aria-hidden="true">
+          <svg :viewBox="`0 0 ${shellSizes[1].width} ${shellSizes[1].height + (desktop ? 44 : 0)}`" preserveAspectRatio="none" focusable="false">
+            <defs><clipPath :id="`${shellId}-actions-${desktop}`" clipPathUnits="objectBoundingBox">
+              <path :d="actionPath(desktop)" :transform="`scale(${1 / shellSizes[1].width} ${1 / (shellSizes[1].height + (desktop ? 44 : 0))})`" />
             </clipPath></defs>
-            <path class="gf-nav__shell-outline" :d="shellPaths[1]" />
           </svg>
         </span>
         <nav class="gf-nav__links hidden items-center gap-0.5 md:flex lg:gap-1" :aria-label="t('navbar.expandNav')">
@@ -38,24 +39,27 @@
           </template>
         </nav>
         <span class="gf-nav__separator mx-1 hidden md:block" aria-hidden="true" />
-        <a href="https://github.com/gofurry/gofurry-nav-site" target="_blank" rel="noopener noreferrer"
-          class="gf-nav__github-link hidden items-center justify-center md:inline-flex" aria-label="GitHub" title="GitHub">
-          <PhGithubLogo :size="20" weight="regular" aria-hidden="true" />
-        </a>
-        <button type="button" class="gf-nav__icon-button inline-flex items-center justify-center"
-          :aria-label="themeToggleLabel" :title="themeToggleLabel" @click="toggleThemeIcon">
-          <PhSun v-if="themeStore.theme === 'light'" :size="20" weight="regular" aria-hidden="true" />
-          <PhMoon v-else :size="20" weight="regular" aria-hidden="true" />
-        </button>
-        <button type="button" class="gf-nav__icon-button gf-nav__mode-button hidden items-center justify-center md:inline-flex"
-          :aria-label="t('navbar.mode')" :title="t('navbar.mode')" @click="openModeModal">
-          <PhGearSix :size="20" weight="regular" aria-hidden="true" />
-        </button>
-        <button type="button" class="gf-nav__icon-button gf-nav__language inline-flex items-center justify-center"
-          :aria-label="currentLang === 'zh' ? 'Switch to English' : '切换至中文'" :title="currentLang === 'zh' ? 'English' : '中文'"
-          @click="switchLang">
-          {{ currentLang === 'zh' ? 'EN' : '中' }}
-        </button>
+        <div ref="upperTools" class="gf-nav__upper-tools relative flex self-stretch items-center gap-0.5 lg:gap-1">
+          <a href="https://github.com/gofurry/gofurry-nav-site" target="_blank" rel="noopener noreferrer"
+            class="gf-nav__github-link hidden items-center justify-center md:inline-flex" aria-label="GitHub" title="GitHub">
+            <PhGithubLogo :size="20" weight="regular" aria-hidden="true" />
+          </a>
+          <button type="button" class="gf-nav__icon-button inline-flex items-center justify-center"
+            :aria-label="themeToggleLabel" :title="themeToggleLabel" @click="toggleThemeIcon">
+            <PhSun v-if="themeStore.theme === 'light'" :size="20" weight="regular" aria-hidden="true" />
+            <PhMoon v-else :size="20" weight="regular" aria-hidden="true" />
+          </button>
+          <button type="button" class="gf-nav__icon-button gf-nav__mode-button hidden items-center justify-center md:inline-flex"
+            :aria-label="t('navbar.mode')" :title="t('navbar.mode')" @click="openModeModal">
+            <PhGearSix :size="20" weight="regular" aria-hidden="true" />
+          </button>
+          <button type="button" class="gf-nav__icon-button gf-nav__language inline-flex items-center justify-center"
+            :aria-label="currentLang === 'zh' ? 'Switch to English' : '切换至中文'" :title="currentLang === 'zh' ? 'English' : '中文'"
+            @click="switchLang">
+            {{ currentLang === 'zh' ? 'EN' : '中' }}
+          </button>
+          <NavUtilities :blocked="showModeModal || mobileMenuOpen || inactive" />
+        </div>
         <button ref="mobileMenuToggle" type="button" class="gf-nav__mobile-toggle inline-flex items-center justify-center md:hidden"
           :class="{ 'gf-nav__mobile-toggle--open': mobileMenuOpen }" :aria-expanded="mobileMenuOpen" :aria-controls="menuId"
           :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')" @click="mobileMenuOpen = !mobileMenuOpen">
@@ -104,6 +108,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useI18n } from 'vue-i18n'
 import logo from '@/assets/svgs/logo-mini.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
+import NavUtilities from '@/components/nav/NavUtilities.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
 const { t, locale } = useI18n()
@@ -112,17 +117,31 @@ const router = useRouter()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 const themeStore = useThemeStore()
-defineProps<{ navOverlayDesktop?: boolean, inactive?: boolean }>()
+const props = defineProps<{ navOverlayDesktop?: boolean, inactive?: boolean }>()
 const emit = defineEmits<{ busy: [value: boolean] }>()
 const menuId = useId()
 const navigation = ref<HTMLElement | null>(null)
 const shellId = useId()
+const upperTools = ref<HTMLElement | null>(null)
+const toolsLeft = ref(214)
+const brandAway = ref(false)
+let brandFrame: number | null = null
+function syncBrand() {
+  brandFrame = null
+  const brand = navigation.value?.querySelector('.gf-nav__brand')
+  if (window.innerWidth < 768 || scrollY <= 24) brandAway.value = false
+  // The mobile owner may still be handing focus back after a desktop resize.
+  else if (!props.inactive && scrollY >= 80 && !brand?.contains(document.activeElement)) brandAway.value = true
+}
+function scheduleBrandSync() {
+  if (brandFrame === null) brandFrame = requestAnimationFrame(syncBrand)
+}
 // A complete diagonal silhouette exists in SSR. Measurement only preserves its
 // pixel radii/slope as content, fonts and viewport change; it never drives layout.
 type ShellSize = { width: number, height: number }
 const shellSizes = ref<[ShellSize, ShellSize]>([{ width: 148, height: 56 }, { width: 400, height: 56 }])
 let shellObserver: ResizeObserver | undefined
-function shellPath(width: number, height: number, brand: boolean) {
+function brandPath(width: number, height: number) {
   const left = 0.5, right = width - 0.5, top = 0.5, bottom = height - 0.5
   const radius = 18, scale = (height - 1) / 55
   const cut = 18 * scale, corner = 4 * scale, end = 5 * scale, dx = cut * 5 / 55
@@ -130,15 +149,33 @@ function shellPath(width: number, height: number, brand: boolean) {
   const tipRadius = 4 * scale, diagonal = Math.hypot(cut, bottom - top)
   const tipY = tipRadius * (1 + cut / diagonal), tipX = tipY * cut / (bottom - top)
   const tangent = tipRadius * (diagonal + cut) / (bottom - top)
-  // Both straight edges follow x(y) = x_top - 18*y/55. Only their joins differ.
-  return brand
-    ? `M${left + radius} ${top} H${right - tangent} A${tipRadius} ${tipRadius} 0 0 1 ${right - tipX} ${top + tipY} L${right - cut + dx} ${bottom - end} Q${right - cut} ${bottom} ${right - cut - corner} ${bottom} H${left + radius} Q${left} ${bottom} ${left} ${bottom - radius} V${top + radius} Q${left} ${top} ${left + radius} ${top} Z`
-    : `M${left + cut + corner} ${top} H${right - radius} Q${right} ${top} ${right} ${top + radius} V${bottom - radius} Q${right} ${bottom} ${right - radius} ${bottom} H${left + tangent} A${tipRadius} ${tipRadius} 0 0 1 ${left + tipX} ${bottom - tipY} L${left + cut - dx} ${top + end} Q${left + cut} ${top} ${left + cut + corner} ${top} Z`
+  // Keep the accepted brand cut; the action edge opens in the opposite direction.
+  return `M${left + radius} ${top} H${right - tangent} A${tipRadius} ${tipRadius} 0 0 1 ${right - tipX} ${top + tipY} L${right - cut + dx} ${bottom - end} Q${right - cut} ${bottom} ${right - cut - corner} ${bottom} H${left + radius} Q${left} ${bottom} ${left} ${bottom - radius} V${top + radius} Q${left} ${top} ${left + radius} ${top} Z`
 }
-const shellPaths = computed(() => shellSizes.value.map((size, index) => shellPath(size.width, size.height, index === 0)))
+const shellPaths = computed(() => [brandPath(shellSizes.value[0].width, shellSizes.value[0].height)])
+// A single polygon owns both tiers. Rounded joins do not bend the diagonal bodies.
+function actionPath(desktop: boolean) {
+  const { width: w, height: h } = shellSizes.value[1]
+  const cut = 18 * (h - 1) / 55
+  const points = desktop
+    ? [[0, 0, 4], [w, 0, 18], [w, h, 4], [w - 22, h + 44, 6], [toolsLeft.value + 18, h + 44, 6], [toolsLeft.value - 4, h, 5], [cut, h, 4]]
+    : [[0, 0, 4], [w, 0, 18], [w, h, 18], [cut, h, 4]]
+  return points.map((point, index) => {
+    const [x, y, radius] = point as [number, number, number]
+    const previous = points[(index + points.length - 1) % points.length]!
+    const next = points[(index + 1) % points.length]!
+    const approach = (other: number[]) => {
+      const length = Math.hypot(other[0]! - x, other[1]! - y)
+      const distance = Math.min(radius, length / 3)
+      return `${x + (other[0]! - x) * distance / length} ${y + (other[1]! - y) * distance / length}`
+    }
+    return `${index ? 'L' : 'M'}${approach(previous)} Q${x} ${y} ${approach(next)}`
+  }).join(' ') + ' Z'
+}
 onMounted(() => {
   const islands = [...navigation.value!.querySelectorAll<HTMLElement>('.gf-nav__island')]
   const measure = () => {
+    toolsLeft.value = upperTools.value!.getBoundingClientRect().left - islands[1]!.getBoundingClientRect().left
     shellSizes.value = islands.map(element => {
       const { width, height } = element.getBoundingClientRect()
       return { width, height }
@@ -201,6 +238,7 @@ function outsideClick(event: MouseEvent) {
 async function handleBreakpoint() {
   const focused = document.activeElement instanceof HTMLElement && navigation.value?.contains(document.activeElement)
   const modalWasOpen = showModeModal.value
+  brandAway.value = false
   const menuWasOpen = mobileMenuOpen.value
   showModeModal.value = false
   closeMenus()
@@ -215,14 +253,21 @@ onMounted(() => {
   mobileQuery.addEventListener('change', handleBreakpoint)
   document.addEventListener('keydown', handleKey)
   document.addEventListener('click', outsideClick)
+  window.addEventListener('scroll', scheduleBrandSync, { passive: true })
+  window.addEventListener('resize', scheduleBrandSync)
+  syncBrand()
 })
 onUnmounted(() => {
   stopModeSubscription?.()
   mobileQuery?.removeEventListener('change', handleBreakpoint)
   document.removeEventListener('keydown', handleKey)
   document.removeEventListener('click', outsideClick)
+  window.removeEventListener('scroll', scheduleBrandSync)
+  window.removeEventListener('resize', scheduleBrandSync)
+  if (brandFrame !== null) cancelAnimationFrame(brandFrame)
 })
-watch(() => route.fullPath, () => { closeMenus(true); showModeModal.value = false })
+watch(() => route.fullPath, () => { closeMenus(true); showModeModal.value = false; scheduleBrandSync() })
+watch(() => props.inactive, scheduleBrandSync)
 watch([mobileMenuOpen, showModeModal], () => emit('busy', mobileMenuOpen.value || showModeModal.value), { flush: 'sync' })
 function saveMode(value: string) { showModeModal.value = false; writeMode(value.trim().slice(0, 32)) }
 async function switchLang() {

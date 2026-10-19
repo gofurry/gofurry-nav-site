@@ -22,7 +22,6 @@
       </div>
     </main>
 
-    <GameToolDock />
   </div>
 </template>
 
@@ -30,7 +29,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
-import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
 import { getGameHomeData, getGameHomeShowcase, getGameCollectionHome, type GameHomeData } from '~/services/game'
 import { emptyGameShowcase } from '~/utils/gameShowcasePresentation'

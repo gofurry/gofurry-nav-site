@@ -82,3 +82,9 @@ pnpm exec playwright test tests/browser/regression/nav-home-header.spec.ts tests
 审查截图：根 `.cache/145-b-review/desktop-hero-content-boundary.png`、`mobile-natural-scroll.png`；日志同目录。只作本地 Fixture 审查，不是生产或人工签核。
 
 无产品功能阻断；保留上述初始化成本和未复现的本地 502 风险。仅提交推回当前 `dev`，不合并、不部署、不关闭 #145，不开展 C。
+
+## 后续人工签核（2026-10-19）
+
+维护者明确确认「#145-B — 人工验收通过，允许进入 #145-C1」。B 已提交并推回
+`f60c9cc3fe0e6599b624e80a818c5a8b6de83cdd`，C1 从该干净 dev 基线开展。
+上文保留 B 交付时的原始状态；C1 对旧 Dock 的后续迁移另记于 C1 验收记录。

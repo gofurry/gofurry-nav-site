@@ -27,9 +27,20 @@ status lives in the [closure record](../docs/acceptance/issue-124-frontend-engin
 #145-B supersedes the historical Home Reveal/prewarm/lock and Footer-debt
 exceptions below: Home content and Footer MUST be actual SSR DOM. Both locales
 MUST hydrate without mismatches and retain the initial Hero node. Scrolling is
-native in Normal/Reduced modes; only desktop ToolDock activation observes content
-geometry. Its directory remains requested on search-open. See the
+native in Normal/Reduced modes. See the
 [B acceptance record](../docs/acceptance/145-b-hero-scroll-content-readiness.md).
+
+#145-C1 supersedes the old Home/Game ToolDocks: public desktop NavBar owns one
+continuous lower tier beneath GitHub/theme/preferences/language, with prize,
+directory search and feedback between their centers. Directory loading MUST remain
+on search-open, preserve SFW/recent-site/no-view-POST semantics and cancel stale
+work on close/locale/route/unmount. Brand visibility uses top-position hysteresis
+with focus protection; mobile handoff remains unchanged. Shells use opposite
+straight inner cuts and one uniform matte surface, without decorative outlines.
+Hero hint clearance is measured locally; desktop center-group spacing changes
+MUST preserve B's natural scrolling and actual SSR. See the
+[C1 record](../docs/acceptance/145-c1-twin-island-utility.md); Visual Golden and
+maintainer visual acceptance remain separate gates.
 
 For frontend decisions, resolve evidence in this order:
 

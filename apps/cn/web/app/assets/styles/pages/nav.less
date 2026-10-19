@@ -103,27 +103,6 @@
   --nav-home-quick-site-fallback-bg: rgba(17, 24, 39, 0.84);
   --nav-home-quick-site-manage-bg: rgba(0, 0, 0, 0.16);
 
-  /* ToolDock controls and search surfaces inherit the Nav Home theme; geometry stays local. */
-  --nav-home-tool-control-border: rgba(255, 255, 255, 0.55);
-  --nav-home-tool-control-bg: rgba(255, 255, 255, 0.70);
-  --nav-home-tool-control-text: #334155;
-  --nav-home-tool-control-shadow: 0 12px 32px rgba(76, 42, 18, 0.14);
-  --nav-home-tool-control-active-border: rgba(253, 186, 116, 0.90);
-  --nav-home-tool-control-active-bg: rgba(255, 255, 255, 0.90);
-  --nav-home-tool-control-active-text: #c2410c;
-  --nav-home-tool-control-active-shadow: 0 14px 36px rgba(76, 42, 18, 0.18);
-  --nav-home-tool-icon-filter: none;
-  --nav-home-tool-panel-border: rgba(255, 255, 255, 0.56);
-  --nav-home-tool-panel-bg: rgba(255, 255, 255, 0.76);
-  --nav-home-tool-panel-text: #1f2937;
-  --nav-home-tool-panel-shadow: 0 18px 44px rgba(76, 42, 18, 0.16);
-  --nav-home-tool-search-divider: rgba(120, 113, 108, 0.14);
-  --nav-home-tool-search-icon: #57534e;
-  --nav-home-tool-result-hover-bg: rgba(254, 215, 170, 0.52);
-  --nav-home-tool-result-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
-  --nav-home-tool-result-logo-bg: rgba(255, 237, 213, 0.90);
-  --nav-home-tool-result-meta: rgba(68, 64, 60, 0.65);
-  --nav-home-tool-empty-text: rgba(68, 64, 60, 0.68);
 
   /* Spotlight panel chrome, row hierarchy and visited state share the Nav Home theme.
    * Gradients and icon glow remain complete semantic values. */
@@ -189,30 +168,6 @@ html.dark .nav-home-page {
   --nav-home-transition-bg: rgba(20, 28, 41, 0.84);
   --nav-home-group-title-hover: #7dd3fc;
 
-  /* Dark-only input, placeholder and title colors preserve the unchanged Light cascade. */
-  --nav-home-tool-control-border: rgba(255, 255, 255, 0.10);
-  --nav-home-tool-control-bg: rgba(15, 23, 42, 0.76);
-  --nav-home-tool-control-text: #dbe4f0;
-  --nav-home-tool-control-shadow: 0 12px 32px rgba(2, 6, 23, 0.28);
-  --nav-home-tool-control-active-border: rgba(125, 211, 252, 0.42);
-  --nav-home-tool-control-active-bg: rgba(30, 41, 59, 0.92);
-  --nav-home-tool-control-active-text: #f8fafc;
-  --nav-home-tool-control-active-shadow: 0 14px 36px rgba(2, 6, 23, 0.36);
-  --nav-home-tool-icon-filter: drop-shadow(0 0 5px rgba(248, 250, 252, 0.42));
-  --nav-home-tool-panel-border: rgba(255, 255, 255, 0.10);
-  --nav-home-tool-panel-bg: rgba(15, 23, 42, 0.88);
-  --nav-home-tool-panel-text: #e2e8f0;
-  --nav-home-tool-panel-shadow: 0 18px 44px rgba(2, 6, 23, 0.36);
-  --nav-home-tool-search-divider: rgba(255, 255, 255, 0.08);
-  --nav-home-tool-search-icon: #cbd5e1;
-  --nav-home-tool-search-input-text: #f8fafc;
-  --nav-home-tool-search-placeholder: rgba(148, 163, 184, 0.82);
-  --nav-home-tool-result-title: #f8fafc;
-  --nav-home-tool-result-hover-bg: rgba(255, 255, 255, 0.08);
-  --nav-home-tool-result-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --nav-home-tool-result-logo-bg: rgba(30, 41, 59, 0.90);
-  --nav-home-tool-result-meta: rgba(148, 163, 184, 0.82);
-  --nav-home-tool-empty-text: rgba(148, 163, 184, 0.82);
 
   /* Spotlight Dark palette; structure and interaction stay in the shared selectors. */
   --nav-home-spotlight-panel-bg:
@@ -318,22 +273,22 @@ html.dark .nav-home-page {
   }
 
   .nav-header__search {
-    top: 76px;
+    top: 100px;
   }
 
   .nav-header__quick-access {
-    top: 248px;
+    top: 272px;
     display: flex;
   }
 }
 
 @media (min-width: 1024px) {
   .nav-header__search {
-    top: 88px;
+    top: 112px;
   }
 
   .nav-header__quick-access {
-    top: 268px;
+    top: 292px;
   }
 }
 
@@ -1548,334 +1503,6 @@ html.dark .nav-transition-bar__author {
   box-shadow: var(--nav-home-transition-author-shadow);
 }
 
-.nav-tool-dock {
-  --nav-tool-edge-gap: 0.35rem;
-  --nav-tool-rail-width: 2.75rem;
-
-  position: fixed;
-  top: 6rem;
-  right: max(
-    var(--nav-tool-edge-gap),
-    calc((100vw - 2080px) / 2 - var(--nav-tool-rail-width) - var(--nav-tool-edge-gap))
-  );
-  bottom: 5.6rem;
-  z-index: 40;
-  display: none;
-  align-items: flex-start;
-  gap: 0.5rem;
-  pointer-events: none;
-}
-
-@media (min-width: 1024px) {
-  .nav-tool-dock {
-    display: flex;
-  }
-}
-
-.nav-tool-panel {
-  pointer-events: auto;
-}
-
-.nav-tool-rail {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  pointer-events: none;
-}
-
-.nav-tool-rail__primary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  pointer-events: auto;
-}
-
-.nav-tool-button,
-.nav-tool-feedback {
-  border: 1px solid var(--nav-home-tool-control-border);
-  border-radius: 0.65rem;
-  background: var(--nav-home-tool-control-bg);
-  color: var(--nav-home-tool-control-text);
-  box-shadow: var(--nav-home-tool-control-shadow);
-  backdrop-filter: blur(18px);
-  transition:
-    background 500ms ease,
-    border-color 500ms ease,
-    color 500ms ease,
-    box-shadow 500ms ease,
-    filter 500ms ease;
-}
-
-html.dark .nav-tool-button,
-html.dark .nav-tool-feedback {
-  border-color: var(--nav-home-tool-control-border);
-  background: var(--nav-home-tool-control-bg);
-  color: var(--nav-home-tool-control-text);
-  box-shadow: var(--nav-home-tool-control-shadow);
-}
-
-.nav-tool-button {
-  position: relative;
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  place-items: center;
-  overflow: hidden;
-}
-
-.nav-tool-button:hover,
-.nav-tool-button.active,
-.nav-tool-feedback:hover {
-  border-color: var(--nav-home-tool-control-active-border);
-  background: var(--nav-home-tool-control-active-bg);
-  color: var(--nav-home-tool-control-active-text);
-  box-shadow: var(--nav-home-tool-control-active-shadow);
-  filter: saturate(1.05);
-}
-
-html.dark .nav-tool-button:hover,
-html.dark .nav-tool-button.active,
-html.dark .nav-tool-feedback:hover {
-  border-color: var(--nav-home-tool-control-active-border);
-  background: var(--nav-home-tool-control-active-bg);
-  color: var(--nav-home-tool-control-active-text);
-  box-shadow: var(--nav-home-tool-control-active-shadow);
-}
-
-.nav-tool-icon-stack {
-  display: grid;
-  width: 1.55rem;
-  height: 1.55rem;
-  place-items: center;
-}
-
-.nav-tool-icon {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: var(--nav-home-tool-icon-filter);
-}
-
-.nav-tool-button--search .nav-tool-icon-stack {
-  width: 1.15rem;
-  height: 1.15rem;
-}
-
-html.dark .nav-tool-icon {
-  filter: var(--nav-home-tool-icon-filter);
-}
-
-.nav-tool-feedback {
-  display: grid;
-  width: 2.75rem;
-  min-height: 4.3rem;
-  place-items: center;
-  gap: 0.26rem;
-  font-size: 0.68rem;
-  font-weight: 500;
-  line-height: 1;
-  text-decoration: none;
-  pointer-events: auto;
-}
-
-.nav-tool-feedback > span:last-child {
-  max-width: 100%;
-  overflow: hidden;
-  padding: 0 0.12rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nav-tool-panel {
-  width: min(21rem, calc(100vw - 5rem));
-  overflow: hidden;
-  border: 1px solid var(--nav-home-tool-panel-border);
-  border-radius: 0.75rem;
-  background: var(--nav-home-tool-panel-bg);
-  color: var(--nav-home-tool-panel-text);
-  box-shadow: var(--nav-home-tool-panel-shadow);
-  backdrop-filter: blur(18px);
-  transform-origin: top right;
-  will-change: opacity, transform;
-}
-
-html.dark .nav-tool-panel {
-  border-color: var(--nav-home-tool-panel-border);
-  background: var(--nav-home-tool-panel-bg);
-  color: var(--nav-home-tool-panel-text);
-  box-shadow: var(--nav-home-tool-panel-shadow);
-}
-
-.nav-tool-search__input {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  border-bottom: 1px solid var(--nav-home-tool-search-divider);
-  padding: 0.72rem;
-}
-
-html.dark .nav-tool-search__input {
-  border-bottom-color: var(--nav-home-tool-search-divider);
-}
-
-.nav-tool-search__input svg {
-  width: 1rem;
-  height: 1rem;
-  flex: 0 0 auto;
-  fill: none;
-  stroke: var(--nav-home-tool-search-icon);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-}
-
-html.dark .nav-tool-search__input svg {
-  stroke: var(--nav-home-tool-search-icon);
-}
-
-.nav-tool-search__input input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  font-size: 0.82rem;
-  outline: none;
-  transition: color 500ms ease;
-}
-
-html.dark .nav-tool-search__input input {
-  color: var(--nav-home-tool-search-input-text);
-}
-
-html.dark .nav-tool-search__input input::placeholder {
-  color: var(--nav-home-tool-search-placeholder);
-}
-
-.nav-tool-results {
-  max-height: 18rem;
-  overflow: auto;
-  padding: 0.45rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.nav-tool-results::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.nav-tool-results button {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 0.62rem;
-  border: 0;
-  border-radius: 0.55rem;
-  background: transparent;
-  cursor: pointer;
-  padding: 0.52rem;
-  text-align: left;
-  transition:
-    background 500ms ease,
-    color 500ms ease,
-    box-shadow 500ms ease;
-}
-
-.nav-tool-results button:hover {
-  background: var(--nav-home-tool-result-hover-bg);
-  box-shadow: var(--nav-home-tool-result-hover-shadow);
-}
-
-html.dark .nav-tool-results button:hover {
-  background: var(--nav-home-tool-result-hover-bg);
-  box-shadow: var(--nav-home-tool-result-hover-shadow);
-}
-
-.nav-tool-results img {
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 auto;
-  border-radius: 0.45rem;
-  background: var(--nav-home-tool-result-logo-bg);
-  object-fit: cover;
-}
-
-html.dark .nav-tool-results img {
-  background: var(--nav-home-tool-result-logo-bg);
-}
-
-.nav-tool-results span {
-  min-width: 0;
-}
-
-.nav-tool-results strong,
-.nav-tool-results small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nav-tool-results strong {
-  font-size: 0.78rem;
-}
-
-html.dark .nav-tool-results strong {
-  color: var(--nav-home-tool-result-title);
-}
-
-.nav-tool-results small {
-  margin-top: 0.1rem;
-  color: var(--nav-home-tool-result-meta);
-  font-size: 0.68rem;
-}
-
-html.dark .nav-tool-results small {
-  color: var(--nav-home-tool-result-meta);
-}
-
-.nav-tool-empty {
-  padding: 1.2rem 0.9rem;
-  color: var(--nav-home-tool-empty-text);
-  font-size: 0.78rem;
-}
-
-html.dark .nav-tool-empty {
-  color: var(--nav-home-tool-empty-text);
-}
-
-.nav-tool-panel-transition-enter-active,
-.nav-tool-panel-transition-leave-active {
-  transition:
-    opacity 500ms ease,
-    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 500ms ease;
-}
-
-.nav-tool-panel-transition-enter-from,
-.nav-tool-panel-transition-leave-to {
-  opacity: 0;
-  filter: blur(6px);
-  transform: translateX(10px) scale(0.975);
-}
-
-.nav-tool-list-transition-enter-active,
-.nav-tool-list-transition-leave-active {
-  transition:
-    opacity 500ms ease,
-    transform 500ms ease;
-}
-
-.nav-tool-list-transition-enter-from,
-.nav-tool-list-transition-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 .spotlight-panel {
   position: relative;
   min-height: 18.25rem;
@@ -2219,3 +1846,14 @@ html.dark .nav-tool-empty {
   // Suggestions must not cover the new platform trigger or escape the 360px Hero.
   .search-suggestion-list { top: calc(100% + 3.75rem); max-height: 6rem; }
 }
+
+// Reserve the original control positions on short desktop viewports.
+@media (min-width: 768px) and (max-height: 520px) {
+  .nav-header__search { top: 76px; }
+  .nav-header__quick-access { top: 248px; }
+}
+@media (min-width: 1024px) and (max-height: 520px) {
+  .nav-header__search { top: 88px; }
+  .nav-header__quick-access { top: 268px; }
+}
+.nav-header__scroll-hint--hidden { visibility: hidden; }

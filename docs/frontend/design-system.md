@@ -167,11 +167,16 @@ replaces flags. At >=768px islands are fixed, with compact spacing below 1024px;
 after #145-A1 mobile uses an absolute overlay that scrolls away and hands navigation
 to the existing four Bottom Tabs. Both modes leave the document flow; only actual
 page content owners provide local clearance, while backgrounds start at the top.
-The layout retains mobile bottom clearance. #145-A2 uses one continuous 12px SVG
-interface for both inner ends: the brand fills its left side, the actions its exact
-complement. It scales with island height without a browser-specific clip fallback;
-native controls and their focus rings stay outside the decorative geometry.
-Active icons use color, not inner cards.
+The layout retains mobile bottom clearance. #145-C1 uses complete SVG clip paths
+with straight, opposite inner cuts and small rounded endpoints: brand top is wider
+to the right, actions top extends further left. The gap widens downwards. One
+uniform matte shell includes the lower trapezoid beneath the last four actions;
+its three Phosphor utilities sit between their centers. No shell stroke, gradient,
+highlight or shadow is used; native controls and focus rings remain unclipped.
+Active icons use color, not inner cards. At >=768px the brand hides after 80px and
+returns at 24px, deferring while focused; right navigation remains fixed. The
+desktop Hero center group moves down 24px, except at short heights <=520px;
+the hint requires 24px of actual clearance below search/Quick Access.
 Site tabs and Context respect the fixed desktop header. #145-B replaces Home
 Reveal with native scrolling and SSR content; its obsolete target margin is removed.
 Menu exit is inert immediately, and Reduced Motion retains #139's local rules.

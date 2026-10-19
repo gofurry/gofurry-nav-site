@@ -1,14 +1,16 @@
 <template>
   <header
+      ref="headerRef"
       class="nav-header"
   >
     <h1 class="sr-only">{{ homeHeading }}</h1>
     <HeroBackground :desktop-object-key="desktopObjectKey" :mobile-object-key="mobileObjectKey" />
-    <div class="nav-header__search">
+    <div ref="searchRef" class="nav-header__search">
       <SearchBox />
     </div>
 
     <div
+        ref="quickRef"
         v-if="showQuickAccess"
         class="nav-header__quick-access"
     >
@@ -21,7 +23,7 @@
       />
     </div>
 
-    <div class="nav-header__scroll-hint">
+    <div ref="hintRef" class="nav-header__scroll-hint" :class="{ 'nav-header__scroll-hint--hidden': !hintVisible }">
       <span class="nav-header__scroll-label">
         {{ t('navHeader.scrollHint') }}
       </span>
@@ -111,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import NavQuickAccess from './NavQuickAccess.vue'
@@ -152,6 +154,32 @@ const customSiteForm = ref({
   url: '',
 })
 const draggingCustomSiteId = ref<string | null>(null)
+
+const headerRef = ref<HTMLElement | null>(null)
+const searchRef = ref<HTMLElement | null>(null)
+const quickRef = ref<HTMLElement | null>(null)
+const hintRef = ref<HTMLElement | null>(null)
+const hintVisible = ref(false)
+let hintObserver: ResizeObserver | null = null
+let hintFrame: number | null = null
+function syncHint() {
+  hintFrame = null
+  if (window.innerWidth < 768 || !hintRef.value || !searchRef.value) { hintVisible.value = false; return }
+  const hint = hintRef.value.getBoundingClientRect()
+  const contentBottom = Math.max(searchRef.value.getBoundingClientRect().bottom, quickRef.value?.getBoundingClientRect().bottom ?? 0)
+  hintVisible.value = hint.height > 0 && hint.top >= contentBottom + 24
+}
+function scheduleHint() {
+  if (hintFrame === null) hintFrame = requestAnimationFrame(syncHint)
+}
+function observeHintLayout() {
+  hintObserver?.disconnect()
+  for (const element of [headerRef.value, searchRef.value, quickRef.value, hintRef.value]) {
+    if (element) hintObserver?.observe(element)
+  }
+  scheduleHint()
+}
+watch(showQuickAccess, observeHintLayout, { flush: 'post' })
 
 let stopNavHeaderSettingsSubscription: (() => void) | null = null
 
@@ -265,6 +293,9 @@ function handleCustomSiteDragEnd() {
 }
 
 onMounted(() => {
+  hintObserver = new ResizeObserver(scheduleHint)
+  observeHintLayout()
+  window.addEventListener('resize', scheduleHint)
   try {
     syncNavHeaderSettings()
     syncRecentSites()
@@ -282,6 +313,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  hintObserver?.disconnect()
+  window.removeEventListener('resize', scheduleHint)
+  if (hintFrame !== null) cancelAnimationFrame(hintFrame)
   window.removeEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
   window.removeEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
   window.removeEventListener('storage', handleRecentSitesChange)

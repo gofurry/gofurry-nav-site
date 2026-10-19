@@ -1,6 +1,40 @@
 import { test, expect, customSeed, searchPopupURL } from '../fixtures/nav-home-header'
 import { mkdir, writeFile } from 'node:fs/promises'
 
+for (const [width, height] of [[1440, 900], [1440, 600], [1440, 480], [900, 700], [390, 844]] as const) {
+  test(`145-C1 Hero group and hint clearance ${width}x${height}`, async ({ page, header }) => {
+    await header.open(width)
+    await page.setViewportSize({ width, height })
+    await header.settle(header.search)
+    const hint = page.locator('.nav-header__scroll-hint')
+    const search = page.locator('.nav-header__search'), quick = page.locator('.nav-header__quick-access')
+    if (width >= 768) {
+      expect((await search.boundingBox())!.y).toBe(width >= 1024 ? height <= 520 ? 88 : 112 : 100)
+      expect((await quick.boundingBox())!.y).toBe(width >= 1024 ? height <= 520 ? 268 : 292 : 272)
+      const fits = await hint.evaluate(el => el.getBoundingClientRect().top >= Math.max(
+        document.querySelector('.nav-header__search')!.getBoundingClientRect().bottom,
+        document.querySelector('.nav-header__quick-access')!.getBoundingClientRect().bottom) + 24)
+      await expect(hint).toHaveCSS('visibility', fits ? 'visible' : 'hidden')
+      if (height === 900) expect(fits).toBe(true)
+      if (height === 480) expect(fits).toBe(false)
+      expect((await quick.boundingBox())!.y + (await quick.boundingBox())!.height).toBeLessThanOrEqual(height)
+    } else {
+      await expect(hint).toBeHidden()
+      await expect(page.locator('.gf-nav__utilities')).toBeHidden()
+      expect((await header.root.boundingBox())!.height).toBe(360)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    if (process.env.GOFURRY_145_C1_REVIEW === '1') {
+      await mkdir('../../../.cache/145-c1-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/145-c1-review/home-${width}x${height}-light.png` })
+      await page.locator('.gf-nav').getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
+      await header.settle(header.search)
+      await page.screenshot({ path: `../../../.cache/145-c1-review/home-${width}x${height}-dark.png` })
+    }
+    header.assertQuiet()
+  })
+}
+
 test('B2 Quick Modal preserves the Normal 180/220ms contract', async ({ page, header }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await header.open()

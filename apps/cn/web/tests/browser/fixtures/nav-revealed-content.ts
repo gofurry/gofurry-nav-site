@@ -60,6 +60,7 @@ type State = {
   upstream: URL[]
   upstreamEnd?: number
   directoryAllowed: boolean
+  preferencesAllowed: boolean
   expectedViews: Set<string>
   expectedPopups: Set<string>
   browserAPI: RequestEvidence[]
@@ -97,6 +98,7 @@ type Scene = {
   reveal(): Promise<void>
   alignContent(): Promise<void>
   openSearch(): Promise<void>
+  openPreferences(): Promise<void>
   directoryCount(): number
   hoverTopCard(): Promise<Locator>
   clickSite(target: Locator, value: Site, touchView: boolean): Promise<void>
@@ -116,6 +118,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
       state.upstream.push(url)
       if (url.pathname === '/api/v2/nav/home' && url.search === `?lang=${state.lang}`) return { data: state.data.home }
       if (state.directoryAllowed && url.pathname === '/api/v2/nav/sites/directory' && url.search === `?lang=${state.lang}`) return { data: state.data.directory }
+      if (state.preferencesAllowed && url.pathname === '/api/v2/nav/appearance/patterns' && !url.search) return { data: { schema_version: 1, patterns: [] } }
       for (const id of state.expectedViews) {
         if (url.pathname === `/api/v2/nav/sites/${id}/view` && !url.search) return { data: { site_id: Number(id), view_count: 4321 } }
       }
@@ -170,7 +173,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
           previous.scene.assertQuiet()
           previous.state.upstreamEnd = app.requests.length
         }
-        const state: State = { lang, data: scenarioData(), upstream: [], directoryAllowed: false,
+        const state: State = { lang, data: scenarioData(), upstream: [], directoryAllowed: false, preferencesAllowed: false,
           expectedViews: new Set(), expectedPopups: new Set(), browserAPI: [], assets: [],
           weather: [], popups: [], external: [], failures: [], pages: [] }
         if (dataset !== 'full') {
@@ -222,11 +225,11 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
         const groups = content.locator('.nav-group-section')
         const groupPopover = page.locator('.group-popover')
         const sitePopover = page.locator('.site-popover')
-        const dock = page.locator('.nav-tool-dock')
-        const rail = dock.locator('.nav-tool-rail')
+        const dock = page.locator('.gf-nav__utilities')
+        const rail = dock.locator('.gf-nav__utility-row')
         const searchPanel = dock.getByRole('region', { name: '搜索站点', exact: true })
         const searchInput = searchPanel.getByPlaceholder('搜索站点名称或简介...')
-        const results = searchPanel.locator('.nav-tool-results button')
+        const results = searchPanel.locator('.gf-nav__search-results button')
         const panels = content.locator('.spotlight-panel')
         const spotlight = content.locator(':scope > section')
         const featured = panels.filter({ has: page.getByRole('heading', { name: lang === 'en' ? 'Featured' : '精选站点', exact: true }) })
@@ -262,10 +265,12 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
           expect(state.upstream.map(url => url.pathname + url.search)).toEqual([
             `/api/v2/nav/home?lang=${lang}`,
             ...(state.directoryAllowed ? [`/api/v2/nav/sites/directory?lang=${lang}`] : []),
+            ...(state.preferencesAllowed ? ['/api/v2/nav/appearance/patterns'] : []),
             ...[...state.expectedViews].map(id => `/api/v2/nav/sites/${id}/view`),
           ])
           expect(state.browserAPI).toEqual([
             ...(state.directoryAllowed ? [{ method: 'GET', path: `/api/v2/nav/sites/directory?lang=${lang}` }] : []),
+            ...(state.preferencesAllowed ? [{ method: 'GET', path: '/api/v2/nav/appearance/patterns' }] : []),
             ...[...state.expectedViews].map(id => ({ method: 'POST', path: `/api/v2/nav/sites/${id}/view` })),
           ])
           expect(state.weather).toEqual(width >= 640 ? [weatherURL] : [])
@@ -284,7 +289,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
         await expect.poll(() => page.locator('html').evaluate(element => element.classList.contains('dark'))).toBe(theme === 'dark')
         await expect.poll(() => page.locator('.nav-header__background--managed img').evaluate((image: HTMLImageElement) =>
           image.complete && image.naturalWidth > 0 && image.currentSrc)).toBe(heroURLs[width < 768 ? 1 : 0])
-        await expect(dock).toHaveCount(0)
+        await expect(dock).toBeVisible({ visible: width >= 768 })
         await assertHeroHydration(page, ssr, state.pages[0]!.errors, lang === 'en' ? '/en' : '/')
         if (width >= 640) await expect.poll(() => state.weather.length).toBe(1)
         const scene: Scene = {
@@ -295,7 +300,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
             // Historical helper name retained for Visual consumers. This is explicit
             // test-only positioning, never a production Reveal action/expectation.
             await scene.alignContent()
-            await expect(dock).toHaveCount(width >= 1024 ? 1 : 0)
+            await expect(dock).toBeVisible({ visible: width >= 768 })
             await expect(content).toBeVisible()
             await settle(content, bar)
             assertQuiet()
@@ -314,6 +319,11 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
             await expect(searchPanel).toBeVisible()
             await expect(searchInput).toBeFocused()
             await expect.poll(() => scene.directoryCount()).toBe(1)
+          },
+          async openPreferences() {
+            state.preferencesAllowed = true
+            await page.locator('.gf-nav__mode-button').click()
+            await expect.poll(() => state.upstream.filter(url => url.pathname === '/api/v2/nav/appearance/patterns').length).toBe(1)
           },
           async hoverTopCard() {
             const target = card(state.data.community.name)

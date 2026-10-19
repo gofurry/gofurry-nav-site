@@ -1,6 +1,58 @@
 import { test, expect } from '../fixtures/nav-shell'
 import { mkdir, writeFile } from 'node:fs/promises'
 
+for (const width of [900, 1440]) {
+  test(`145-C1 continuous utility tier and brand top hysteresis at ${width}`, async ({ page, navShell }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await navShell.open({ width })
+    const { nav } = navShell
+    const brand = nav.locator('.gf-nav__brand'), actions = nav.locator('.gf-nav__actions')
+    const tools = nav.locator('.gf-nav__utility-row')
+    const centers = await nav.evaluate(root => {
+      const center = (el: Element) => { const r = el.getBoundingClientRect(); return r.x + r.width / 2 }
+      return { upper: [...root.querySelectorAll('.gf-nav__upper-tools > a, .gf-nav__upper-tools > button')].map(center),
+        lower: [...root.querySelectorAll('.gf-nav__utility-row > a, .gf-nav__utility-row > button')].map(center) }
+    })
+    expect(centers.upper).toHaveLength(4); expect(centers.lower).toHaveLength(3)
+    for (let i = 0; i < 3; i++) expect(Math.abs(centers.lower[i]! - (centers.upper[i]! + centers.upper[i + 1]!) / 2)).toBeLessThanOrEqual(1)
+    await expect(tools.getByRole('link', { name: '去抽奖', exact: true })).toHaveAttribute('href', '/games/prize')
+    await expect(tools.getByRole('link', { name: '反馈', exact: true })).toHaveAttribute('rel', 'noopener noreferrer')
+    await expect(nav.locator('.gf-nav__shell-outline')).toHaveCount(0)
+    for (const shell of await nav.locator('.gf-nav__shell:visible').all()) {
+      await expect(shell).toHaveCSS('border-width', '0px')
+      await expect(shell).toHaveCSS('box-shadow', 'none')
+      await expect(shell).toHaveCSS('background-image', 'none')
+      await expect(shell.locator('path')).toHaveCSS('stroke', 'none')
+    }
+    const top = (await actions.boundingBox())!.y
+    await brand.focus()
+    await navShell.scrollTo(150)
+    await expect(brand).not.toHaveAttribute('inert')
+    await nav.locator('.gf-nav__links a').first().focus()
+    await expect(brand).toHaveAttribute('inert')
+    await expect(brand).toHaveCSS('visibility', 'hidden')
+    expect((await actions.boundingBox())!.y).toBe(top)
+    await expect(tools).toBeVisible()
+    if (process.env.GOFURRY_145_C1_REVIEW === '1') {
+      await mkdir('../../../.cache/145-c1-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/145-c1-review/terms-${width}-scrolled.png` })
+    }
+    await navShell.scrollTo(40); await expect(brand).toHaveAttribute('inert')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(brand).toHaveCSS('transition-duration', '0s')
+    await navShell.scrollTo(24); await expect(brand).not.toHaveAttribute('inert')
+    await expect(brand).toHaveCSS('opacity', '1')
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await navShell.scrollTo(150); await expect(brand).toHaveAttribute('inert')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(nav).toHaveCSS('position', 'absolute')
+    await expect(tools).toBeHidden()
+    await navShell.assertBottomTabs(true)
+    await navShell.scrollTo(0); await navShell.assertBottomTabs(false)
+    navShell.assertQuiet()
+  })
+}
+
 test('B2 Mobile Menu and Bottom Tabs motion contract', async ({ page, navShell }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await navShell.open({ width: 390 })
@@ -133,6 +185,10 @@ test('Desktop Nav Shell retains theme through real language navigation', async (
   await navShell.assertLanguage('EN')
   await navShell.assertTheme('dark')
   await expect(nav).toHaveCount(1)
+  const utilities = nav.locator('.gf-nav__utility-row')
+  await expect(utilities.getByRole('link', { name: 'Lottery', exact: true })).toHaveAttribute('href', '/en/games/prize')
+  await expect(utilities.getByRole('button', { name: 'Search sites', exact: true })).toBeVisible()
+  await expect(utilities.getByRole('link', { name: 'Feedback', exact: true })).toHaveAttribute('href', 'https://github.com/gofurry/gofurry-nav-site/issues')
   navShell.assertQuiet()
 })
 
@@ -202,9 +258,10 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
     expect(await page.locator('.gf-static-page').evaluate(el => el.getBoundingClientRect().top)).toBe(0)
     expect(await page.locator('.legal-panel').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(width >= 768 ? 88 : 76)
     await expect(nav.locator('.gf-nav__island')).toHaveCount(2)
-    const outlines = await nav.locator('.gf-nav__shell-outline').evaluateAll(nodes => nodes.map((node, index) => {
-      const path = node as SVGPathElement, svg = path.ownerSVGElement!
-      const { width: w, height: h } = svg.viewBox.baseVal
+    const outlines = await nav.locator('.gf-nav__shell:visible svg').evaluateAll(nodes => nodes.map((node, index) => {
+      const svg = node as SVGSVGElement, path = svg.querySelector('clipPath path')! as SVGPathElement
+      const { width: w, height: fullHeight } = svg.viewBox.baseVal
+      const h = svg.closest('.gf-nav__island')!.getBoundingClientRect().height
       // Sample the actual full silhouette, rather than assert a particular path string.
       const edge = (y: number) => {
         let low = index === 0 ? w - 60 : 0, high = index === 0 ? w : 60
@@ -219,25 +276,27 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
       const shell = svg.parentElement!, island = shell.parentElement!
       const box = island.getBoundingClientRect(), surface = shell.getBoundingClientRect()
       const voidX = index === 0 ? box.right - 3 : box.left + 3
-      const voidY = index === 0 ? box.bottom - 4 : box.top + 4
+      const voidY = box.bottom - 4
       return { drop: (edge(h * 0.02) - edge(h * 0.98)) * 56 / h,
         slope: (top - bottom) / (h * 0.8),
         straightError: Math.max(...[0.25, 0.5, 0.75].map(t => Math.abs(edge(h * t) - (top + (bottom - top) * (t - 0.1) / 0.8)))),
-        fullHeight: path.getBBox().height / h,
-        sized: Math.abs(w - box.width) < 0.1 && Math.abs(h - box.height) < 0.1 && surface.width === box.width && surface.height === box.height,
+        fullHeight: path.getBBox().height / fullHeight,
+        sized: Math.abs(w - box.width) < 0.1 && Math.abs(fullHeight - surface.height) < 0.1 && surface.width === box.width,
         clipped: getComputedStyle(shell).clipPath.startsWith('url('), blur: getComputedStyle(shell).backdropFilter,
         controlsUnclipped: getComputedStyle(island).clipPath === 'none' && getComputedStyle(island).overflow === 'visible',
         cutPassesHits: !island.closest('.gf-nav')!.contains(document.elementFromPoint(voidX, voidY)) }
     }))
     expect(outlines).toHaveLength(2)
+    expect(outlines[0]!.drop, 'Brand cut runs upper right to lower left').toBeGreaterThan(0)
+    expect(outlines[1]!.drop, 'Actions cut runs upper left to lower right').toBeLessThan(0)
     for (const shape of outlines) {
-      expect(shape.drop, 'Compact full-height cut runs from upper right to lower left').toBeGreaterThanOrEqual(14)
-      expect(shape.drop).toBeLessThanOrEqual(22)
+      expect(Math.abs(shape.drop)).toBeGreaterThanOrEqual(14)
+      expect(Math.abs(shape.drop)).toBeLessThanOrEqual(22)
       expect(shape.straightError, 'Middle 80% remains a diagonal straight line').toBeLessThan(0.15)
       expect(shape.fullHeight).toBeGreaterThan(0.97)
       expect(shape).toMatchObject({ sized: true, clipped: true, blur: 'blur(10px)', controlsUnclipped: true, cutPassesHits: true })
     }
-    expect(Math.abs(outlines[0]!.slope - outlines[1]!.slope)).toBeLessThan(0.01)
+    expect(Math.abs(outlines[0]!.slope + outlines[1]!.slope)).toBeLessThan(0.01)
     const geometry = await nav.evaluate(root => {
       const [brand, actions] = [...root.querySelectorAll('.gf-nav__island')].map(el => el.getBoundingClientRect())
       const hit = document.elementFromPoint((brand!.right + actions!.left) / 2, brand!.top + 16)
@@ -373,10 +432,11 @@ for (const theme of ['light', 'dark'] as const) {
     }
     await page.mouse.move(10, 400)
     await page.mouse.wheel(0, 1000)
-    await expect(page.locator('.nav-tool-dock')).toHaveCount(1)
+    await expect(page.locator('.nav-tool-dock')).toHaveCount(0)
+    await expect(page.locator('.gf-nav__utilities')).toBeVisible()
     await expect(navShell.nav).toHaveCSS('position', 'fixed')
     expect((await navShell.nav.boundingBox())!.y).toBe(0)
-    expect(await page.locator('.nav-tool-dock').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
+    expect(await page.locator('.gf-nav__utilities').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(72)
     navShell.assertQuiet()
   })
 }
@@ -423,11 +483,13 @@ for (const width of [390, 900, 1440]) {
     await expect(focused).toHaveCount(1)
     await expect(focused).toHaveCSS('outline-width', '2px')
     await expect(focused).toHaveCSS('outline-style', 'solid')
-    await expect(navShell.nav.locator('.gf-nav__shell')).toHaveCount(2)
+    await expect(navShell.nav.locator('.gf-nav__shell')).toHaveCount(3)
+    await expect(navShell.nav.locator('.gf-nav__shell:visible')).toHaveCount(2)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0)
-    if (process.env.GOFURRY_145_A3_REVIEW === '1') {
-      await mkdir('../../../.cache/145-a3-review', { recursive: true })
-      await page.screenshot({ path: `../../../.cache/145-a3-review/home-${width}-dark-focus.png` })
+    if (process.env.GOFURRY_145_A3_REVIEW === '1' || process.env.GOFURRY_145_C1_REVIEW === '1') {
+      const folder = process.env.GOFURRY_145_C1_REVIEW === '1' ? '145-c1-review' : '145-a3-review'
+      await mkdir(`../../../.cache/${folder}`, { recursive: true })
+      await page.screenshot({ path: `../../../.cache/${folder}/pattern-home-${width}-dark-focus.png` })
     }
     navShell.assertQuiet()
   })

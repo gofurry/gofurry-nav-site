@@ -60,8 +60,8 @@ export function getNavSiteIndex(): Promise<NavSiteIndexResponse> {
   return useApi('navV2')('/nav/sites/index')
 }
 
-export function getNavSiteDirectory(lang: string): Promise<Site[]> {
-  return useApi('navV2')('/nav/sites/directory', { query: { lang } })
+export function getNavSiteDirectory(lang: string, signal?: AbortSignal): Promise<Site[]> {
+  return useApi('navV2')('/nav/sites/directory', { query: { lang }, signal })
 }
 
 export function getNavSiteGroupPage(siteGroupId: string, lang: string, page = 1, pageSize = 24): Promise<NavSiteGroupPageResponse> {

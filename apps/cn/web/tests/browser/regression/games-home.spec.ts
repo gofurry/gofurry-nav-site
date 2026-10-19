@@ -219,8 +219,9 @@ for (const theme of ['light', 'dark'] as const) {
     await assertCardHover(scene)
     await expect(sidebar).toBeVisible()
     await expect(dock).toBeVisible()
-    await expect(dock.getByRole('button')).toHaveAttribute('aria-label', '去抽奖')
-    await expect(dock.getByRole('link')).toHaveAttribute('href', 'https://github.com/gofurry/gofurry-nav-site/issues')
+    await expect(dock.getByRole('link', { name: '去抽奖', exact: true })).toHaveAttribute('href', '/games/prize')
+    await expect(dock.getByRole('button', { name: '搜索站点', exact: true })).toBeVisible()
+    await expect(dock.getByRole('link', { name: '反馈', exact: true })).toHaveAttribute('href', 'https://github.com/gofurry/gofurry-nav-site/issues')
     const lists = [scene.data.panel.latest_games, scene.data.panel.updated_games, scene.data.panel.free_games, scene.data.panel.popular_games!]
     for (let index = 0; index < 4; index++) {
       const group = scene.group(index), name = groupNames[index]!

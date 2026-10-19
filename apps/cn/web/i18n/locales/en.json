@@ -1045,6 +1045,7 @@
       "feedback": "Feedback",
       "feedbackShort": "Issue",
       "searchPlaceholder": "Search site name or description...",
+      "searchUnavailable": "Sites could not be loaded. Close and reopen to try again.",
       "noSearchResults": "No matching sites"
     }
   },

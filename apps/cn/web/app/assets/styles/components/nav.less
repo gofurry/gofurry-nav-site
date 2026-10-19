@@ -30,26 +30,18 @@ html.dark .gf-nav {
 .gf-nav__shell {
   position: absolute;
   z-index: -1;
-  inset: 0;
   background: var(--gf-nav-bg);
   backdrop-filter: blur(10px);
   pointer-events: auto;
 }
 
-// The one full outline clips material, blur and border together. Controls remain
-// unclipped, while transparent cut-outs (including the brand link) pass hits through.
+// Each visible shell clips one uniform material. Controls and focus stay unclipped;
+// the empty gap and the cut-outs pass pointer input to the page.
 .gf-nav__island > :not(.gf-nav__shell) { pointer-events: auto; }
 .gf-nav__shell > svg {
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-.gf-nav__shell-outline {
-  fill: none;
-  stroke: var(--gf-nav-border);
-  // Clipping removes the outer half, leaving one continuous 1px inner border.
-  stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
 }
 
 @media (min-width: 768px) {
@@ -227,4 +219,55 @@ html.dark .mobile-bottom-tabs {
     // The scoped transform also owns horizontal centering; keep its final value.
     transition: none;
   }
+}
+
+// Brand availability follows top-position hysteresis, never scroll direction.
+.gf-nav__brand {
+  transition: opacity var(--gf-motion-fast) ease, transform var(--gf-motion-fast) ease, visibility 0s;
+}
+.gf-nav__brand--away {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity var(--gf-motion-fast) ease, transform var(--gf-motion-fast) ease, visibility 0s var(--gf-motion-fast);
+}
+.gf-nav .gf-nav__brand--away > * { pointer-events: none; }
+
+.gf-nav__search-panel {
+  width: min(21rem, calc(100vw - 3rem));
+  border-radius: var(--gf-radius-md);
+  background: var(--gf-nav-bg);
+  color: var(--gf-nav-text);
+  backdrop-filter: blur(10px);
+}
+.gf-nav__search-input input {
+  border: 0;
+  background: transparent;
+  color: var(--gf-nav-text);
+  font-size: 0.875rem;
+}
+.gf-nav__search-input input::placeholder { color: var(--gf-nav-text-muted); }
+.gf-nav__search-input input:focus-visible {
+  outline: 2px solid var(--gf-nav-active-text);
+  outline-offset: 2px;
+}
+.gf-nav__search-results { max-height: min(18rem, calc(100dvh - 12rem)); }
+.gf-nav__search-results button {
+  border: 0;
+  border-radius: var(--gf-radius-sm);
+  background: transparent;
+  color: var(--gf-nav-text);
+}
+.gf-nav__search-results button:hover { background: var(--gf-nav-hover-bg); }
+.gf-nav__search-results img { border-radius: var(--gf-radius-sm); }
+.gf-nav__search-results strong { font-size: 0.875rem; font-weight: 600; }
+.gf-nav__search-results small,
+.gf-nav__search-status { color: var(--gf-nav-text-muted); font-size: 0.75rem; }
+.gf-nav .nav-utility-search-enter-active { transition: opacity 180ms ease, transform 180ms ease; }
+.gf-nav .nav-utility-search-enter-from { opacity: 0; transform: translateY(-4px); }
+.gf-nav .nav-utility-search-leave-active { visibility: hidden; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .gf-nav__brand,
+  .gf-nav .nav-utility-search-enter-active { transition: none; }
+  .gf-nav .nav-utility-search-enter-from { opacity: 1; transform: none; }
 }

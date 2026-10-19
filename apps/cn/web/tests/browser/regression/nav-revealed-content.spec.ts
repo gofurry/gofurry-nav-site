@@ -1,6 +1,65 @@
 import { test, expect, quote, weatherURL } from '../fixtures/nav-revealed-content'
 import { mkdir } from 'node:fs/promises'
 
+test('145-C1 utility search keeps focus, cache and instant Reduced exit on the shared shell', async ({ revealed }) => {
+  const scene = await revealed.open({ width: 900 })
+  const { page, searchPanel, searchInput } = scene
+  const trigger = scene.dock.getByRole('button', { name: '搜索站点', exact: true })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.exposeFunction('reduceUtilityMotion', () => page.emulateMedia({ reducedMotion: 'reduce' }))
+  await page.evaluate(() => {
+    document.addEventListener('transitionrun', event => {
+      if (!(event.target instanceof HTMLElement) || !event.target.matches('.gf-nav__search-panel') || document.documentElement.dataset.utilityReduced) return
+      document.documentElement.dataset.utilityReduced = 'requested'
+      const bridge = window as Window & { reduceUtilityMotion?: () => Promise<void> }
+      void bridge.reduceUtilityMotion!().then(() => { document.documentElement.dataset.utilityReduced = 'done' })
+    })
+  })
+  expect(scene.directoryCount()).toBe(0)
+  await scene.openSearch()
+  await expect(page.locator('html')).toHaveAttribute('data-utility-reduced', 'done')
+  await expect(searchPanel).toHaveCSS('opacity', '1')
+  await expect(searchPanel).toHaveCSS('transform', 'none')
+  await searchInput.fill('wolf')
+  await expect(scene.results.locator('strong')).toHaveText(['Wolf Community', 'Wolf Archive'])
+  await searchInput.press('Tab'); await expect(scene.results.first()).toBeFocused()
+  await scene.results.first().press('Shift+Tab'); await expect(searchInput).toBeFocused()
+  const panelBox = (await searchPanel.boundingBox())!, rowBox = (await scene.rail.boundingBox())!
+  expect(panelBox.y).toBeGreaterThanOrEqual(rowBox.y + rowBox.height)
+  expect(panelBox.x).toBeGreaterThanOrEqual(0)
+  expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(900)
+  if (process.env.GOFURRY_145_C1_REVIEW === '1') {
+    await mkdir('../../../.cache/145-c1-review', { recursive: true })
+    await page.screenshot({ path: '../../../.cache/145-c1-review/shared-search-900.png' })
+  }
+  await searchInput.press('Escape'); await expect(searchPanel).toHaveCount(0); await expect(trigger).toBeFocused()
+  for (let i = 0; i < 3; i++) {
+    await trigger.click(); await expect(searchInput).toBeFocused()
+    await trigger.click(); await expect(searchPanel).toHaveCount(0)
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await trigger.click(); await expect(searchInput).toBeFocused()
+  await page.locator('.search-input').click()
+  await expect(searchPanel).toHaveCount(0)
+  await expect(page.locator('.search-input')).toBeFocused()
+  await trigger.click(); await expect(searchInput).toBeFocused()
+  const preferencesTrigger = page.locator('.gf-nav__mode-button')
+  await scene.openPreferences()
+  await expect(searchPanel).toHaveCount(0)
+  const preferences = page.locator('.gf-preferences-modal')
+  await expect(preferences).toBeVisible()
+  await preferences.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(preferences).toHaveCount(0)
+  await expect(preferencesTrigger).toBeFocused()
+  await trigger.click(); await expect(searchInput).toBeFocused()
+  await page.locator('a[href="/about"]').first().click()
+  await expect(searchPanel).toHaveCount(0)
+  await expect(scene.dock).toBeVisible()
+  expect(scene.directoryCount()).toBe(1)
+  await expect(page.locator('.nav-tool-dock, .game-tool-dock')).toHaveCount(0)
+  scene.assertQuiet()
+})
+
 for (const lang of ['zh', 'en'] as const) for (const dataset of ['full', 'partial', 'empty'] as const) {
   test(`145-B actual SSR content ${lang} ${dataset}`, async ({ revealed }) => {
     const scene = await revealed.open({ lang, dataset, width: lang === 'en' ? 390 : 1440, mode: 'nsfw' })
@@ -61,7 +120,7 @@ test('145-B native wheel and keyboard remain continuous across live Reduced chan
       await expect.poll(() => page.evaluate(() => scrollY)).toBe(target)
     }
     expect(await scene.shell.evaluate(el => el.getBoundingClientRect().top)).toBe(660)
-    await expect(scene.dock).toHaveCount(0)
+    await expect(scene.dock).toBeVisible()
     if (motion === 'no-preference' && process.env.GOFURRY_145_B_REVIEW === '1') {
       await mkdir('../../../.cache/145-b-review', { recursive: true })
       await page.screenshot({ path: '../../../.cache/145-b-review/desktop-hero-content-boundary.png' })
@@ -77,13 +136,15 @@ test('145-B native wheel and keyboard remain continuous across live Reduced chan
   await expect(scene.dock).toBeVisible()
   await scene.openSearch()
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
-  await expect(scene.dock).toHaveCount(0)
+  await expect(scene.dock).toBeVisible()
+  await expect(scene.searchPanel).toBeVisible()
+  await scene.searchInput.press('Escape')
   await expect(scene.searchPanel).toHaveCount(0)
   expect(await page.evaluate(() => document.activeElement?.isConnected)).toBe(true)
   await page.locator('a[href="/about"]').first().click()
   await expect(scene.shell).toHaveCount(0)
   await page.mouse.wheel(0, 120)
-  await expect(scene.dock).toHaveCount(0)
+  await expect(scene.dock).toBeVisible()
   scene.assertQuiet()
 })
 
@@ -100,7 +161,7 @@ test('145-B touch scroll keeps mobile content and the existing bottom-tab handof
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(30)
   expect(await page.evaluate(() => scrollY)).toBeLessThan(200)
   await client.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
-  await expect(scene.dock).toHaveCount(0)
+  await expect(scene.dock).toBeHidden()
   await page.mouse.wheel(0, 300)
   await expect(page.locator('.mobile-bottom-tabs')).toHaveAttribute('aria-hidden', 'false')
   await page.mouse.wheel(0, -150)
@@ -249,7 +310,7 @@ test('Core cards, TransitionBar and real group/site popovers retain their runtim
   const { page, bar, quoteTrigger, author, groupPopover, sitePopover } = scene
   await scene.reveal()
   await scene.alignContent()
-  await expect(scene.dock).toBeHidden()
+  await expect(scene.dock).toBeVisible()
   const card = scene.card(scene.data.community.name)
   await expect(card.locator('h3')).toHaveCSS('font-size', '16px')
   await expect(card.locator('h3')).toHaveCSS('line-height', '24px')
@@ -284,7 +345,7 @@ test('Core cards, TransitionBar and real group/site popovers retain their runtim
   scene.assertQuiet()
 })
 
-test('ToolDock caches its real directory, filters SFW search and opens a result without a view POST', async ({ revealed }) => {
+test('Navigation utilities cache the real directory, filters SFW search and opens a result without a view POST', async ({ revealed }) => {
   const scene = await revealed.open()
   await scene.reveal()
   await expect(scene.dock).toBeVisible()
@@ -293,7 +354,7 @@ test('ToolDock caches its real directory, filters SFW search and opens a result 
   await expect(scene.results.locator('strong')).toHaveText(['Wolf Community', 'Wolf Archive'])
   await expect(scene.searchPanel.getByText('Wolf After Dark', { exact: true })).toHaveCount(0)
   await scene.searchInput.fill('zz-no-result')
-  await expect(scene.searchPanel.locator('.nav-tool-empty')).toHaveText('没有找到匹配站点')
+  await expect(scene.searchPanel.locator('.gf-nav__search-status')).toHaveText('没有找到匹配站点')
   await scene.searchInput.press('Escape')
   await expect(scene.searchPanel).toHaveCount(0)
   await scene.openSearch()

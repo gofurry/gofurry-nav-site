@@ -1045,6 +1045,7 @@
       "feedback": "反馈",
       "feedbackShort": "反馈",
       "searchPlaceholder": "搜索站点名称或简介...",
+      "searchUnavailable": "暂时无法加载站点，请关闭后重试。",
       "noSearchResults": "没有找到匹配站点"
     }
   },
