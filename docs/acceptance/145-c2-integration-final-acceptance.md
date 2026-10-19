@@ -37,9 +37,9 @@ go run ./check-production-policy
 | Nuxt nav-utilities + nav-custom-sites / search-platform-picker | PASS，6/6 + 2/2（后者包含新增失焦反例） |
 | 最终构建 / Functional | PASS；首轮 87 PASS / 2 FAIL，修复后相关 11/11 PASS（不重复无变化用例） |
 | Visual 审查后定向更新 / 独立只读 compare | PASS，94/94；首次失败历史见下文 |
-| Fast / Repository Policy | R0、R1 PASS；最后单项测试修正后的自动检查待记录 |
+| 最终源码 Fast / Repository Policy | PASS，R2，Run 39305435156 |
 | Full 四组 / Docker Image / Gate | R1 三组 PASS，Insights Nav 取消、Gate FAIL；最后失败用例本地修复 PASS，依维护者要求不再重跑整套 Full |
-| 最终源码完整 Visual | NOT RUN |
+| 最终源码完整 Visual | PASS，R2，137/137，Run 39305456623 |
 | 生产部署与冒烟 | NOT RUN，维护者执行 |
 
 Visual 迁移：Nav Shell 改检可见 clipped shell 的单层雾面/无框/无高光，并按实际二层底边裁切；手机 Bottom Tabs 通过实际 Hero/content 位置触发，替换旧 73px。
@@ -257,11 +257,23 @@ pnpm run test:visual --grep '<all 94 reviewed test titles>$' <15 reviewed owners
 - 最后只修 `resource-routing-preferences.spec.ts`：断点后明确断言弹窗移除与品牌焦点，再经真实手机菜单重开设置，保留 390px Light/Dark、radio、焦点和保存断言。原用例确定性 FAIL；修正后 **1/1 PASS**（2.6s），文件 ESLint PASS，日志 `resource-focus-before.log` / `resource-focus-after.log`。
 - 维护者随后明确要求避免重复大量 CI。本轮不再手动重跑 Full；保留 R1 的三组、构建与镜像证据，但最后测试修正提交的整套 Full/Gate 为 **NOT RUN / PENDING**。完整 Visual 尚未运行，仍只触发一次。未修改超时、重试、断言强度或工作流。
 
+## 最终结论（维护者要求停止重复 Full 后）
+
+最终代码/测试/Golden 源码 **R2 = `31d09d63172da2d0f0f5c145b96f074b830fe5cf`**；触发 Visual 前和结果记录前均确认 `origin/dev == R2`。
+
+- [Fast / Repository Policy](https://github.com/gofurry/gofurry-nav-site/actions/runs/39305435156)：**PASS**，`headSha=R2`，nav-web-fast、repository-policy 及最终 nav-web Gate 全部成功。此轮为正常 push 自动触发，未额外手动重跑 Fast。
+- [完整 Visual](https://github.com/gofurry/gofurry-nav-site/actions/runs/39305456623)：**PASS，137/137（4.6m）**，`headSha=R2`。本轮唯一一次手动 Visual，使用原 pinned Linux 环境与只比较模式，未更新远端 Golden。
+- R1→R2 只有 Resources 单项测试和验收文档；R0→R2 无任何额外产品源码或 Golden 差异。R1 的 Build、Docker Image 和三个成功回归组可作为对应范围证据，但不冒充 R2 的全套 Full PASS。
+- **Full 最终 Gate：PENDING**。R1 的真实最终 Gate FAIL，最后一个旧契约已本地 1/1 修复通过；按维护者最新指令不再运行整套 Full。不能把 Issue 关闭、人工视觉签核或 Visual 全绿视作 Full 通过。
+- 随后的记录提交 **D 仅修改本验收文档**；Fast/Visual 的实际验证版本为 R2，Full 的实际版本为 R1。不会将 D 的 HEAD 冒充这些 run 的 headSha。
+
+收尾只读查询发现 #145 已由 `gofurry` 于 `2026-10-19T18:46:27Z` 关闭（北京时间 2026-10-20 02:46:27）。Codex 未关闭、评论关闭或重新打开 Issue；早先 Open 记录是当时状态。未合并 main、部署、执行 update.sh 或操作生产。
+
 ## 性能与部署交接
 
 沿用 B 的真实测量及限制：SSR HTML 46,383 → 75,810 bytes、正文 SSR 从空变为实际 DOM；首屏存在解析/水合成本，不能宣称整体性能提升。B 的桌面/手机首滚未见长任务；真实网络/低端设备仍需体验确认。本轮不改 SSR、性能预算或基线，不重复无关性能采样。
 
-发布准入目前 **PENDING**，只有最终代码 Fast/Policy、Full 四组与镜像/Gate、完整 Visual 均通过才标 READY。
+发布准入 **PENDING**：Fast/Policy 与完整 Visual 已通过，尚缺修正后完整 Full/Gate 的成功记录；不能标 READY。没有遗留的已确认产品修复项。
 默认分支是 main。维护者必须确认服务器当前分支确实包含被验收 C2 代码；`git pull --ff-only` 不会把 dev 带入 main。生产若用 main，须先经批准合并并确认该分支 Full；若用 dev，核对接受版本与门禁。
 按 [DEPLOYMENT](../../apps/cn/web/DEPLOYMENT.md) 确认工作树、旧镜像/私有配置回退、Compose project `nav-web` 和构建内存，再由维护者从 `apps/cn/web` 执行 `./update.sh`，核验 healthz 及中英文首页、Games/Search、Site/Group 的桌面/手机导航、自然滚动、搜索/弹窗和 hydration。
-发生构建失败不强行切换或 prune；Git pull 不是镜像回滚。Issue 保持 Open，生产冒烟后由维护者决定关闭。
+发生构建失败不强行切换或 prune；Git pull 不是镜像回滚。Issue 当前已由维护者关闭，但其状态不替代发布门禁；生产操作与冒烟仍由维护者独立执行。
