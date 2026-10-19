@@ -4,7 +4,7 @@ import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.
 import { STEAM_SHARED_CDN_GROUP_PREFIXES } from '../../../app/utils/steamAssets'
 import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 import { captureBrowserErrors } from './browser-errors'
-import { assertHeroHydration, heroOrigins } from './hero-lifecycle'
+import { assertHeroHydration, assertHomeHydration, heroOrigins } from './hero-lifecycle'
 
 interface HeroItem { id: string; name: string; object_key: string }
 interface Gate { promise: Promise<void>; release(): void }
@@ -100,12 +100,20 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
     preferenceApp.current = state
     const errors = captureBrowserErrors(page, state.expectedNetworkFailures)
     const probeBody = await readFile(new URL('../../fixtures/cdn-probe.bin', import.meta.url))
-    const navigate = async (navigation: Promise<Response | null>) => {
+    const navigate = async (navigation: Promise<Response | null>, localHandoff = false) => {
       const response = await navigation
       expect(response?.status()).toBe(200)
       const ssrHTML = await response!.text()
       await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as Element & { __vue_app__?: unknown })?.__vue_app__))
-      await assertHeroHydration(page, ssrHTML, errors)
+      if (localHandoff) {
+        // Local restore/fallback intentionally promotes a new decoded frame.
+        // Keep strict SSR/Footer/error evidence; the Local owner verifies its URL,
+        // cookie, one-shot requests and retained paint through the handoff.
+        await assertHomeHydration(page, ssrHTML, errors)
+        expect(ssrHTML).toMatch(/class="[^"]*\bnav-header__background\b/)
+        expect(await page.evaluate(() => Boolean((window as Window & { initialHeroNode?: Element }).initialHeroNode))).toBe(true)
+        await expect(page.locator('.nav-header__background:not([data-hero-pending])')).toHaveCount(1)
+      } else await assertHeroHydration(page, ssrHTML, errors)
       return { ssrHTML }
     }
     const waitCatalogPosition = async (position: number) => {
@@ -190,12 +198,13 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
           if (Object.values(STEAM_SHARED_CDN_GROUP_PREFIXES).flat().includes(url.origin) && STEAM_PROBE_PATHS.includes(url.pathname)) return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="45"/>' })
           return route.abort()
         })
-        return navigate(page.goto('/', { waitUntil: 'networkidle' }))
+        return navigate(page.goto('/', { waitUntil: 'networkidle' }), mode === 'local' || (mode === null && seedLocalCache))
       },
       async reload() {
         // Navigation/network bookkeeping can remain busy after a reload. The
         // contract is hydrated SSR plus a loaded Hero, not whole-page network idle.
-        const result = await navigate(page.reload({ waitUntil: 'load' }))
+        const localHandoff = (await context.cookies()).some(cookie => cookie.name === 'gf_hero_mode' && cookie.value === 'local')
+        const result = await navigate(page.reload({ waitUntil: 'load' }), localHandoff)
         await expectHeroLoaded(page)
         return result
       },

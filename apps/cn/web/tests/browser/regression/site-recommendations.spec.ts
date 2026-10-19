@@ -153,7 +153,7 @@ for (const state of ['empty', 'unavailable', 'failure'] as const) test('optional
 test('recommendation locale identity changes and a Similar link counts the destination exactly once', async ({ page, runtime }) => {
   runtime.state.recommendations = 'ready'
   await page.setViewportSize({ width: 1440, height: 900 }); await open(page)
-  await page.locator('button').filter({ has: page.locator('img[alt="CN"]') }).first().click()
+  await page.getByRole('button', { name: '切换至中文', exact: true }).click()
   await expect(page).toHaveURL('/site/41?tab=overview')
   await expect(items(page).first()).toContainText('相似站点示例')
   expect(runtime.calls.filter(call => call.url.pathname.endsWith('/recommendations')).map(call => Object.fromEntries(call.url.searchParams))).toEqual([{ lang: 'en', limit: '8' }, { lang: 'zh', limit: '8' }])

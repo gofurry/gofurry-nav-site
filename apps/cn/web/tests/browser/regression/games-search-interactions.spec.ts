@@ -87,7 +87,7 @@ for (const theme of ['light', 'dark'] as const) {
     await panel.locator('.game-search-jump-action--primary').click()
     await search.waitResults('Result 2', 1)
     // The old ellipsis key disappears on page 2; focus falls back to its current page.
-    await expect(page.locator('[aria-current="page"]')).toBeFocused(); search.assertQuiet()
+    await expect(page.locator('.game-search-page-button[aria-current="page"]')).toBeFocused(); search.assertQuiet()
   })
 }
 

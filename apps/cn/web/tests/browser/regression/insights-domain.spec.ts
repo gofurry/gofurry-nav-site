@@ -472,7 +472,7 @@ for (const domain of ['site', 'game'] as const) {
     await page.locator('[data-range="all"]').click()
     await Promise.all([main, slice])
     await expect(page.locator('.insights-slice-trend canvas')).toBeVisible()
-    await page.locator('button:has(img[alt="EN"])').first().click()
+    await page.getByRole('button', { name: 'Switch to English', exact: true }).click()
     await expect(page).toHaveURL(url => url.pathname === '/en' + path)
     await expect(page.locator('.insights-slice-trend canvas')).toBeVisible()
     const query = new URL(page.url()).searchParams

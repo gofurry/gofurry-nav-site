@@ -37,8 +37,8 @@ go run ./check-production-policy
 | Nuxt nav-utilities + nav-custom-sites / search-platform-picker | PASS，6/6 + 2/2（后者包含新增失焦反例） |
 | 最终构建 / Functional | PASS；首轮 87 PASS / 2 FAIL，修复后相关 11/11 PASS（不重复无变化用例） |
 | Visual 审查后定向更新 / 独立只读 compare | PASS，94/94；首次失败历史见下文 |
-| 最终源码 Fast / Repository Policy | NOT RUN，等待推回 |
-| 最终源码 Full 四组 / Docker Image / Gate | NOT RUN |
+| 最终源码 Fast / Repository Policy | 首轮 PASS；后续测试契约修复后等待最终源码验证 |
+| 最终源码 Full 四组 / Docker Image / Gate | 首轮 Gate FAIL；构建/镜像 PASS，修复证据见下文 |
 | 最终源码完整 Visual | NOT RUN |
 | 生产部署与冒烟 | NOT RUN，维护者执行 |
 
@@ -235,6 +235,20 @@ pnpm run test:visual --grep '<all 94 reviewed test titles>$' <15 reviewed owners
 - `updates-light-mobile.png`
 
 </details>
+
+## 远端最终证据
+
+首轮 CI 源码 **R0 = `83dd62ca4644facc08d547ff8a623105a6dc5015`**，推回后确认 `origin/dev == R0`，工作区干净。
+
+- [engineering-foundation / Fast 与 Repository Policy](https://github.com/gofurry/gofurry-nav-site/actions/runs/39300473925)：**PASS**，`headSha=R0`。Fast 包含 402 Unit、100 Nuxt、43 Browser Smoke，全数通过；Lint、Stylelint、Style Policy、Typecheck、语义/SEO guards、Build 均成功。Repository Policy 全部步骤与最终 nav-web Gate 成功。无关 Go/DB 作业按既有变更检测跳过。
+- [首轮 Full](https://github.com/gofurry/gofurry-nav-site/actions/runs/39300493529)：**FAIL**，`headSha=R0`。构建与 Docker Image PASS；Sites/Other 301 PASS / 3 FAIL；Games、Insights Core、Insights Nav 在原 10 分钟预算取消，最终 Gate FAIL。保留 [Sites/Other trace/截图](https://github.com/gofurry/gofurry-nav-site/actions/runs/39300493529/artifacts/12212138620) 及四组原始日志；取消组未上传 artifact，本地按实际失败定向复现，证据在 `.cache/145-c2-review/remaining-before-results/`。没有重试旧 SHA、增加时间或跳过用例。
+- 随后仅修测试契约：五个 owner 的旧语言旗帜定位改真实可访问按钮名称；Games Home 导航改可访问链接；分页限定 `.game-search-page-button[aria-current]`，避免匹配新增导航 active；Site Groups 回首页精确隔离既有天气 iframe URL、方法、frame 与一次请求计数，继续拒绝其他外部请求。
+- Hero Local 的旧辅助断言把“hydrate 保留 SSR frame”误当“Local 恢复后永不换 frame”；拆分 Footer/零错误验证与 frame retention，只有明确 Local/legacy restore 场景按原交接契约验证 SSR 初始节点、单一显示帧、Blob/cookie/请求，其他场景仍要求同一 SSR frame。不增加 hydration 豁免，不改 Hero 产品代码。
+- Showcase 的虚拟 20/60 秒大步推进会在真实 HTTP 完成前触发已有 5 秒 fetch timeout。局部 fixture 以不超过 1 秒的虚拟步长推进同样的精确总时长，每步等待已发送事件的真实 204 与 response.finished；原 999/1、5999/1 边界、一次曝光/去重、响应与错误账本全部保留。未改变产品计时、媒体或网络行为。
+- 语言/天气定向迁移 **11/11 PASS**；其余复现原 13 项全部 FAIL 的历史保留，修正后扩展定向 **33/33 PASS**（1.2m）。修改文件 ESLint、Typecheck PASS；未因测试修改重新本地构建产品或刷新 Golden。命令与完整输出分别留于 `functional-contract-migration.log`、`functional-remaining-before.log`、`functional-remaining-after.log`；后者覆盖 Local、Autoplay/暂停/Reduced/双循环、Search 分页/焦点/history/卸载。
+- 完整 Visual：NOT RUN，等待修复后的 Full 完成后顺序触发。
+
+补测同一 clock helper 影响的 Slow artwork 用例 **1/1 PASS**（`functional-slow-artwork.log`）。首次 grep 使用开头锚点未匹配 Playwright 的完整测试标题，零用例执行；改为该唯一标题后正常验证，未增加 retry。
 
 ## 性能与部署交接
 

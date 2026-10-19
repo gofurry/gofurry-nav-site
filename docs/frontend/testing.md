@@ -610,6 +610,12 @@ hydration mismatches. This applies to Chinese and English Home at every tested
 width and after reload. The former mobile Footer exception has been removed;
 its original evidence remains in historical acceptance records.
 
+The Preferences Local/legacy restore owner separately checks the initial SSR
+frame and the intentional decoded-frame handoff (Blob/fallback URL, cookie and
+one-shot requests); it uses `assertHomeHydration` for the same strict Footer and
+zero-error checks. It must not require the original frame after that intentional
+handoff. Ordinary Hero hydration still requires retained node identity.
+
 | Retired source / contract | New owner under `tests/browser/` |
 | --- | --- |
 | Lifecycle: 1440/390 SSR, actual image load, viewport-only request, retained node, one Home and no Hero API refetch | `smoke/hero.spec.ts` |

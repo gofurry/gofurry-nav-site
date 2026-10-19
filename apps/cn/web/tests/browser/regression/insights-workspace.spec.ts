@@ -151,7 +151,7 @@ for (const [kind, queryKey, keys, endpoint] of [
       await expect(page).toHaveURL(url => url.searchParams.get(queryKey) === key)
     }
     // Locale may reuse the same locale-independent async-data cache.
-    await page.locator('button:has(img[alt="EN"])').first().click()
+    await page.getByRole('button', { name: 'Switch to English', exact: true }).click()
     await expect(page).toHaveURL(url => url.pathname === '/en/insights/games/' + kind && url.searchParams.get(queryKey) === keys.at(-1))
     if (kind === 'players') await expect(page.locator('.insights-container')).toContainText('180')
     runtime.assertQuiet()

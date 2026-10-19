@@ -273,7 +273,7 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
       async waitAborted(gate) { await expect.poll(() => failed.some(item => item.request === gate.request)).toBe(true) },
       async leaveForHome() {
         expectedHomeCalls++; expectedBrowserHomeCalls++
-        await page.locator('.gf-nav__link').filter({ hasText: /^热门兽游$/ }).click()
+        await page.locator('.gf-nav').getByRole('link', { name: '热门兽游', exact: true }).click()
         await expect(page).toHaveURL(`${app.base}/games`)
         await expect(page.locator('.games-search-page')).toHaveCount(0)
         await expect(page.locator('.game-group-page-live').first()).toBeVisible()

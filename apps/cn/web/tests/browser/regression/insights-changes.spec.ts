@@ -121,7 +121,7 @@ for (const domain of ['site', 'game'] as const) test('Changes filters, cursor fa
   expect((await events(page).evaluateAll(els => els.map(el => el.getAttribute('href')))).slice(0, 4)).toEqual(links)
   const query = new URL(page.url()).search
   expect(new URL(page.url()).searchParams.has('cursor')).toBe(false)
-  await page.locator('button:has(img[alt="EN"])').first().click()
+  await page.getByRole('button', { name: 'Switch to English', exact: true }).click()
   await expect(page).toHaveURL(url => url.pathname === '/en/insights/changes' && url.search === query)
   await expect(events(page).first()).toHaveAttribute('href', /^\/en\//)
   runtime.assertQuiet()

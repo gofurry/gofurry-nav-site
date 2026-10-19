@@ -1,4 +1,4 @@
-import { test as base, expect, type Locator, type Page } from '@playwright/test'
+import { test as base, expect, type Locator, type Page, type Request } from '@playwright/test'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import type { GameHomeApiResponse, GameV2ListItem, GameV2NewsItem, GameV2PriceView, GameShowcaseSnapshot, GameShowcaseEvent } from '../../../app/types/game'
 import { collectionHome } from './game-collections-data'
@@ -125,6 +125,7 @@ export type GamesHomeScene = {
   readonly showcasePending: boolean, releaseShowcase(): void, releaseCollections(): void,
   expectShowcasePopup(url: string): void, expectGameDestination(id: string): void,
   holdArtwork(url: string): { requested: Promise<void>; release(): void },
+  advanceShowcaseClock(milliseconds: number): Promise<void>,
   closureClip(target: Locator): Promise<{ x: number, y: number, width: number, height: number }>,
 }
 
@@ -210,6 +211,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     const diagnostics: { text: string, url: string }[] = []
     page.on('console', message => { if (message.type() === 'error') diagnostics.push({ text: message.text(), url: message.location().url }) })
     const external: string[] = [], failed: string[] = [], assets: string[] = [], browserAPI: string[] = []
+    const eventRequests: Request[] = []
     const covers = new Map<string, string>()
     const artworkGates = new Map<string, { requested: Promise<void>; arrived(): void; pending: Promise<void>; release(): void }>()
     const expectedPopups: string[] = [], popupRequests: string[] = [], popups: Page[] = []
@@ -220,6 +222,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     context.on('request', request => {
       const url = new URL(request.url())
       if (url.origin === app.base && url.pathname.startsWith('/api/')) browserAPI.push(`${request.method()} ${url.pathname}${url.search}`)
+      if (url.origin === app.base && url.pathname === eventPath && request.method() === 'POST') eventRequests.push(request)
     })
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url())
@@ -363,6 +366,24 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         await settle(root)
         if (showcase === 'empty' || showcase === 'showcase-failure') assertQuiet()
         return { page, root, groups, stats, sidebar, dock, theme, data: state.data, group, cards, settle, assertQuiet,
+          async advanceShowcaseClock(milliseconds) {
+            // Advance the exact scenario duration, letting real HTTP finish between
+            // ticks. A 60s virtual leap must not outrun the unchanged 5s fetch timeout.
+            const drainEvents = async () => {
+              for (const request of eventRequests) {
+                const response = await request.response()
+                expect(response?.status()).toBe(204)
+                expect(await response!.finished()).toBeNull()
+              }
+            }
+            await drainEvents()
+            for (let remaining = milliseconds; remaining > 0;) {
+              const step = Math.min(1000, remaining)
+              await page.clock.runFor(step)
+              await drainEvents()
+              remaining -= step
+            }
+          },
           rendered, locale, news: root.locator('.game-news-panel'),
           showcase: root.locator('.game-home-showcase'), snapshot: state.showcase, events: state.events, assets,
           get showcasePending() { return state.showcasePending }, releaseShowcase, releaseCollections,

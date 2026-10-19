@@ -364,7 +364,7 @@ for (const domain of ['site', 'game']) test('Compare keyboard picker, max four, 
     expect(runtime.state.searches).toHaveLength(1)
   }
   expect(runtime.count('/sites/directory')).toBe(directory)
-  await page.locator('button:has(img[alt="EN"])').first().click()
+  await page.getByRole('button', { name: 'Switch to English', exact: true }).click()
   await expect(page).toHaveURL(url => url.pathname.startsWith('/en/') && url.searchParams.get('ids') === chosen.join(','))
   await expect(input).toHaveValue('')
   if (domain === 'game') expect(new URL(page.url()).searchParams.get('region')).toBe('HK')

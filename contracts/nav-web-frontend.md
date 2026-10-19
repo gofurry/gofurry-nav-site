@@ -1314,6 +1314,10 @@ all hydration mismatches. Its default route remains `/`; English Home explicitly
 opts into `/en`. The former mobile exception has been removed. Historical
 [RUNTIME-FOOTER-01](../docs/acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01)
 evidence does not authorize an exception in current tests.
+Explicit Local/legacy restoration MAY promote a decoded replacement frame per
+the existing Hero handoff contract. Its owner MUST verify initial SSR evidence,
+final URL/cookie/request behavior and the same zero-error Footer hydration;
+ordinary hydration retains the initial Hero node. This is not an error waiver.
 Generic error capture MUST NOT ignore hydration. Same-run clipped paint Buffer
 and computed-style equality MAY remain runtime invariants; success screenshots,
 computed audit JSON and golden baselines MUST NOT be introduced in P3.2.3.

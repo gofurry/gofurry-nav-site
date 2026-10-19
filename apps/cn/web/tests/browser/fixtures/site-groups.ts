@@ -7,6 +7,7 @@ import { captureBrowserErrors } from './browser-errors'
 const primary = 'https://site-groups-assets.example'
 const groupPath = '/api/v2/nav/site-groups/42/sites'
 const pingPath = '/api/v2/nav/home/ping'
+const weatherURL = 'https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc'
 const icon = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" rx="9" fill="#82654f"/><path d="M10 36V12l14 14 14-14v24" fill="none" stroke="#f4e9dd" stroke-width="4"/></svg>'
 const group = { id: '42', name: '社区与平台', info: '兽迷社区、创作平台与交流站点', priority: 1, site_count: 30, detail_path: '/site-groups/42' }
 const makeSites = (): Site[] => Array.from({ length: 30 }, (_, index) => ({
@@ -80,7 +81,7 @@ export const test = base.extend<{ siteGroups: { open(options?: Options): Promise
     siteGroupsApp.current = state
     const upstreamStart = app.requests.length
     const errors = captureBrowserErrors(page)
-    const external: string[] = [], failed: string[] = [], assets: string[] = [], popups: string[] = []
+    const external: string[] = [], failed: string[] = [], assets: string[] = [], popups: string[] = [], weather: string[] = []
     const browserAPI: Array<{ method: string, path: string, query: string }> = []
     const popupErrors: string[][] = []
     context.on('page', popup => { if (popup !== page) popupErrors.push(captureBrowserErrors(popup)) })
@@ -99,6 +100,11 @@ export const test = base.extend<{ siteGroups: { open(options?: Options): Promise
       if (state.allowView && url.href === 'https://community.example/' && request.method() === 'GET' && request.isNavigationRequest()) {
         popups.push(url.href)
         return route.fulfill({ contentType: 'text/html', body: '<title>Seeded Site Groups navigation</title>' })
+      }
+      if (state.allowHome && url.href === weatherURL && request.method() === 'GET'
+        && request.isNavigationRequest() && request.frame().parentFrame() === page.mainFrame()) {
+        weather.push(url.href)
+        return route.fulfill({ contentType: 'text/html', body: '' })
       }
       external.push(url.href)
       await route.abort('blockedbyclient')
@@ -123,6 +129,7 @@ export const test = base.extend<{ siteGroups: { open(options?: Options): Promise
         ...(state.allowHome ? [{ method: 'GET', path: '/api/v2/nav/home', query: `?lang=${state.lang}` }] : []),
       ])
       expect(popups).toEqual(state.allowView ? ['https://community.example/'] : [])
+      expect(weather).toEqual(state.allowHome && page.viewportSize()!.width >= 640 ? [weatherURL] : [])
       expect(external).toEqual([])
       expect(failed).toEqual([])
       expect([...errors, ...popupErrors.flat()]).toEqual([])
@@ -229,6 +236,7 @@ export const test = base.extend<{ siteGroups: { open(options?: Options): Promise
             await expect(page).toHaveURL(`${app.base}${lang === 'en' ? '/en' : '/'}`)
             await expect(page.locator('.nav-home-page')).toBeVisible()
             await expect.poll(() => state.upstream.filter(url => url.pathname === '/api/v2/nav/home').length).toBe(1)
+            if (page.viewportSize()!.width >= 640) await expect.poll(() => weather.length).toBe(1)
             assertQuiet()
           },
           async visualClip() {

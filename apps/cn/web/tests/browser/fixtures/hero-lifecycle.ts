@@ -51,12 +51,16 @@ interface HeroLifecycle extends LifecycleState {
 }
 
 // Initial SSR and hydration must agree at every Home breakpoint; no Footer waiver.
-export async function assertHeroHydration(page: Page, ssrHTML: string, errors: string[], homePath: '/' | '/en' = '/') {
+export async function assertHomeHydration(page: Page, ssrHTML: string, errors: string[], homePath: '/' | '/en' = '/') {
   expect(new URL(page.url()).pathname).toBe(homePath)
   expect(ssrHTML).toMatch(/class="[^"]*\bgf-footer-shell\b/)
   await expect(page.locator('.gf-footer-shell')).toHaveCount(1)
-  await expectSSRHeroRetained(page)
   expect(errors).toEqual([])
+}
+
+export async function assertHeroHydration(page: Page, ssrHTML: string, errors: string[], homePath: '/' | '/en' = '/') {
+  await assertHomeHydration(page, ssrHTML, errors, homePath)
+  await expectSSRHeroRetained(page)
 }
 
 export async function expectSSRHeroRetained(page: Page) {

@@ -66,7 +66,7 @@ test('Result paging and responsive grid retain visible cards without horizontal 
   const page = search.page
   await page.locator('.game-search-page-button').filter({ hasText: /^2$/ }).click()
   await search.waitResults('Result 5')
-  await expect(page.locator('[aria-current="page"]')).toHaveText('2')
+  await expect(page.locator('.game-search-page-button[aria-current="page"]')).toHaveText('2')
   expect(search.calls('advanced')).toHaveLength(2)
   for (const width of [1440, 960, 700, 390, 320]) {
     await page.setViewportSize({ width, height: 900 })
