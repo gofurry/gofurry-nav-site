@@ -1,4 +1,16 @@
 import { test, expect, openRuntime, settleRuntime, changeCollectionMode, collectionPath } from '../fixtures/game-collections'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+for (const width of [390, 900, 1440]) {
+  test(`145-C2 Collections filter clears the navigation at ${width}`, async ({ page, runtime }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await openRuntime(page, '/games/collections')
+    await assertNavigationClearance(page, '.search-toolbar input, .search-filter-button', `collections-${width}`)
+    await page.getByRole('button', { name: '高级筛选', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: '高级筛选', exact: true })).toBeVisible()
+    runtime.assertQuiet()
+  })
+}
 
 for (const locale of ['zh', 'en']) {
   const prefix = locale === 'en' ? '/en' : ''

@@ -1,7 +1,7 @@
 # Nav Web engineering
 
-Source lives in `apps/cn/web`; public Task/CI names and the Compose project remain
-`nav-web`. Directory naming does not change product or deployment identity.
+Source lives in `apps/cn/web`; frontend Task names use `web`. CI check/workflow
+names and the Compose project retain `nav-web`; deployment identity is unchanged.
 
 Read [the frontend contract](../../../contracts/nav-web-frontend.md) first.
 Root `AGENTS.md` and `.agents/` apply. This is the working router; detailed
@@ -195,9 +195,9 @@ be regenerated to hide new findings; prune them only after fixing their debt.
 Use Node 24 and pnpm 12.6.0, pinned in `packageManager`. Install this project's
 independent lock with `pnpm install --frozen-lockfile`; use `pnpm run` / `pnpm exec`.
 Its `pnpm-workspace.yaml` contains only local settings and script permissions;
-there is no root workspace. Root Task offers `deps:nav-web`, `lint:nav-web`,
-`typecheck:nav-web`, `test:nav-web`, `test:nav-web:browser`, `build:nav-web` and
-`build:nav-web-image`. Browser/Visual remain outside default `task test`/`verify`.
+there is no root workspace. Root Task offers `deps:web`, `lint:web`,
+`typecheck:web`, `test:web`, `test:web:browser`, `build:web` and
+`build:web-image`. Browser/Visual remain outside default `task test`/`verify`.
 
 Use the [current verification sequence](../../../docs/frontend/testing.md#full-verification).
 Pure logic uses Vitest unit; real Nuxt state/composables use the Nuxt project.

@@ -1,5 +1,5 @@
 <template>
-  <section class="games-page game-collections-page mx-auto w-full max-w-[1440px] px-6 pb-10 pt-[88px] md:pt-[104px]">
+  <section class="games-page game-collections-page mx-auto w-full max-w-[1440px] px-6 pb-10 pt-[88px] md:pt-[var(--gf-nav-content-top)]">
     <h1 class="sr-only">{{ t('game.collections.heading') }}</h1>
     <div class="games-search-overlay-scope search-toolbar mb-8 flex w-full items-center gap-3">
       <div class="search-shell relative min-w-0 flex-1">

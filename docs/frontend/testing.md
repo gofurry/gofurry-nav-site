@@ -49,8 +49,15 @@ prize/feedback links and absence of the old Dock. Mobile behavior remains covere
 Review captures may be written to root `.cache/145-a2-review/`
 with `GOFURRY_145_REVIEW=1`; they are not Golden or human acceptance.
 C1 screenshots use root `.cache/145-c1-review/` with `GOFURRY_145_C1_REVIEW=1`.
-Existing Nav Shell/full-page Visual pixels await #145-C2; C1 does not authorize
-snapshot updates. See the [C1 record](../acceptance/145-c1-twin-island-utility.md).
+#145-C2 authorizes only reviewed differences attributable to the accepted A–C1.1
+work, generated in the pinned image and followed by independent comparison. See
+the [C2 result](../acceptance/145-c2-integration-final-acceptance.md) for exact scope
+and final-source CI evidence; earlier phase limits remain historical. See the
+[C1 record](../acceptance/145-c1-twin-island-utility.md).
+
+C2 extends the same measured clearance to Collections Index, retains full Header
+and Game Detail Overview viewport captures (no half-cut lower tier), and records
+the accepted A–C1.1 PNG migration in its ledger.
 
 C1.1 adds actual shell-bottom/hit-test evidence to the existing Games Search/Detail,
 Site Group/Detail owners at 390/768/900/1024/1440. Other inspected entry owners
@@ -597,18 +604,16 @@ artwork/binary responses; unknown external requests abort. Intentional image
 failure and Catalog 503 URLs enter the exact expected-failure set before the
 failure, without suppressing unrelated network or application errors.
 
-The known narrow-screen homepage Footer mismatch remains production debt.
-`assertHeroHydration` is Hero-specific and verifies all of: width < 768, homepage,
-exactly one hydration mismatch, no `.gf-footer-shell` in SSR, exactly one client
-footer, the same SSR Hero node, and zero other browser errors. Only that verified
-navigation evidence is consumed; subsequent errors remain guarded, and reload
-must pass the assertion again. The generic collector still captures hydration.
-`app/layouts/default.vue` is unchanged.
+After #145-B, `assertHeroHydration` requires the retained SSR Hero node, exactly
+one Footer in both SSR and the hydrated page, and zero browser errors, including
+hydration mismatches. This applies to Chinese and English Home at every tested
+width and after reload. The former mobile Footer exception has been removed;
+its original evidence remains in historical acceptance records.
 
 | Retired source / contract | New owner under `tests/browser/` |
 | --- | --- |
 | Lifecycle: 1440/390 SSR, actual image load, viewport-only request, retained node, one Home and no Hero API refetch | `smoke/hero.spec.ts` |
-| Lifecycle: no auxiliary Hero Images, auxiliary failure leaves URL/paint unchanged, recommendation/Save/focus/resize/prewarm stability, explicit data refresh, pre-hydration Primary→Mirror/terminal fallback, empty Mobile pool | `regression/hero-lifecycle.spec.ts` |
+| Lifecycle: no auxiliary Hero Images, auxiliary failure leaves URL/paint unchanged, recommendation/Save/focus/resize/natural-scroll stability, explicit data refresh, pre-hydration Primary→Mirror/terminal fallback, empty Mobile pool | `regression/hero-lifecycle.spec.ts` |
 | Lifecycle + Preferences: two-stage Local restore and route stability; explicit Local SSR, Cancel, Local→Random, missing cache one-shot fallback, legacy cookie migration/reload | `regression/hero-local-background.spec.ts` |
 | Preferences: Quick Access ARIA/Space/Enter/focus and draft/persistence; input focus; 1440/390/320 × light/dark no overflow, equal source widths, shared computed appearance | `regression/preferences-foundation.spec.ts` |
 | Preferences: independent Fixed Desktop/Mobile SSR and exact BigInt cookie, saved Local isolation, reload, same ID/new key, invalid Desktop preserves valid Mobile | `regression/hero-preference-modes.spec.ts` |
@@ -1021,35 +1026,36 @@ reusing `startInsightsFixtureApp` with worker-owned production Nitro/local API
 and fresh test-owned contexts, diagnostics, request/error evidence and state.
 `/terms` hosts ordinary Nav and Mobile Menu with zero upstream/external requests
 or errors before opening Mode. `/` supplies one SSR Home response with empty
-groups/spotlights and null Hero keys; real Hero frames, Mobile reveal and Desktop
-prewarm remain active.
+groups/spotlights and null Hero keys; real Hero frames and actual SSR content/Footer
+remain active. #145-B removed Reveal and prewarm.
 Theme uses only localStorage seeds and real NavBar/Theme Store initialization.
 
 The initial plan's fully quiet Home assumption conflicts with production.
 Explicitly approved exceptions are one `/nav/home/saying?lang=zh` response with
 null saying and the exact weather iframe, fulfilled locally without external
 network access. Both are counted separately; all other upstream/external calls
-fail. Mobile Home reuses the existing narrow `assertHeroHydration` evidence
-(one mismatch, narrow viewport, absent SSR/present client Footer, retained SSR
-Hero node and no other error), without modifying Hero tests or the generic guard.
-Raw errors remain in the attachment and any later mismatch fails.
+fail. Mobile Home uses `assertHeroHydration` to verify actual SSR Footer/content and the
+retained SSR Hero with zero hydration errors in both locales. Raw errors remain
+in the attachment; the former one-mismatch exception is retired.
 The real Mode modal also mounts Background Editor eagerly: a further approved
 exception allows exactly one empty `/nav/appearance/patterns` catalog only after
 the Mobile Functional test clicks BottomTab Mode. Other Terms scenarios allow none.
 
 Two Functional cases own Desktop Theme→EN routing to `/en/terms` and persistent
 Dark state; Mobile menu theme retention, route-driven close, English active state,
-BottomTab hidden-at-top/visible-above-72 behavior, Mode modal active/Cancel and
-the mounted-but-hidden 640px breakpoint. Real scrolling polls product listeners
-and its 160ms sync path; no internal state mutation or fixed sleep is used.
+BottomTab hidden-at-top/content-midpoint handoff and latched visibility, Mode
+modal active/Cancel and the 767/768px breakpoint. Real scrolling polls product
+listeners; no internal state mutation or fixed sleep is used.
 
 Eight Page clips under `visual/__snapshots__/nav-shell.spec.ts/` cover
 `nav-shell-standard-{light,dark}-desktop.png`,
 `nav-shell-overlay-{light,dark}-desktop.png`,
 `nav-shell-mobile-menu-{light,dark}.png` and
 `nav-shell-bottom-tabs-{light,dark}-mobile.png` (1440×900 / 390×844, zh-CN).
-Desktop clips extend real Nav bounds to include shadow/canvas while excluding
-SearchBox/QuickAccess; menu clips include the absolute panel; BottomTab clips
+Desktop clips extend actual visible shell bounds, including the lower tier and
+neutral surrounding canvas. Home Overlay includes the complete center Search
+because its category row shares the tier’s vertical band; QuickAccess stays outside.
+Menu clips include the absolute panel; BottomTab clips
 expand its bounds by 12px and use genuine Home active state, never hover.
 Target-scoped finite transitions, loaded assets, fonts and two RAFs precede
 geometry/quiet checks. No global Home animation wait, mask or tolerance is added.
@@ -1095,13 +1101,12 @@ with safe highlight segments. Empty keeps its empty state; unavailable, injected
 Expected Chromium network diagnostics are scoped to injected URLs; application
 errors/hydration mismatches still fail. No test sends public provider requests.
 
-Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
-contract, with an observer recording the earliest real SSR Hero. Raw errors stay
-attached; only that verified initial mismatch is consumed. Every later error
-still fails, and Desktop keeps zero browser errors.
+Mobile Home uses `assertHeroHydration` with an observer recording the earliest
+real SSR Hero. Both SSR and hydrated pages contain exactly one Footer; no
+hydration mismatch is consumed. Mobile and Desktop require zero browser errors.
 
 The original regressions protect Search typography/theme parity, debounce/loading/empty,
-keyboard/popup and reveal lock; plus QuickAccess slots/favicon fallback and
+keyboard/popup and natural scrolling; plus QuickAccess slots/favicon fallback and
 Modal validation/add/delete/localStorage. The audited chip transition is
 `background, box-shadow, color` at 500ms each: existing unlayered Less overrides
 the plan's `transition-all` assumption. Accepted computed appearance is authority.
@@ -1135,7 +1140,9 @@ evidence. The responsive case first resizes a hydrated Desktop, then closes its
 documents and opens a fresh NSFW document/storage scenario before navigation.
 No Mobile SSR exception or internal component mutation is involved.
 
-Real wheel input reveals Cards/Popovers, TransitionBar, ToolDock and Spotlight.
+Native wheel input reaches SSR Cards/Popovers, TransitionBar and Spotlight. The
+historical `reveal()` fixture name only aligns test content; it is not a product
+Reveal action. #145-C1 moves directory Search to the desktop right island.
 The clock fixes only current time to `2026-09-18T12:40:00+08:00` with
 `Asia/Shanghai`; browser timers still run normally. Theme/mode/recent storage
 and fresh routing diagnostics initialize production consumers. Saved QuickAccess
@@ -1145,20 +1152,23 @@ Managed Hero/site images remain real, fulfilled only at exact seeded URLs.
 Every scenario proves one SSR Home request and no hydration refetch. Non-null
 saying avoids a secondary saying request. The exact Tianqi iframe is fulfilled
 locally. Directory GET is allowed once only after Search; a view POST and exact
-popup URL are authorized only by the real site action. ToolDock clicks must not
+popup URL are authorized only by the real site action. Right-island search clicks must not
 POST views. Unexpected API/external traffic, request failures and browser errors
 fail; raw network/error evidence is attached even when opening fails. Ping refresh
 is not allowed: scenarios must finish before the real 60-second interval.
 
 Four regressions cover Cards' computed typography, quote focus/blur, Group hover,
-top SitePopover geometry and ping, ToolDock search/empty/Escape/cache/popup,
+top SitePopover geometry and ping, right-island search/empty/Escape/cache/popup,
 Spotlight motion/wrap/visited/POST, 1/2/3/4 responsive panels and cross-surface
 SFW/NSFW. Audit correction: the real description is **12px / 16.2px**, because
 unlayered `line-height: 1.35` overrides `text-xs`; the plan's 16px is not current
 appearance. No product style is changed to satisfy a static utility inference.
 
 Eight Light/Dark Page clips cover Core (1000px), top SitePopover (1000px),
-ToolDock Search (1440px) and Spotlight (960px). Clips come from target geometry;
+Right Island Search (1440px) and Spotlight (960px). The two search PNG names
+change from `nav-tool-dock-search-*` to `nav-right-island-search-*` in C2, preserving
+search coverage and including the entire two-tier action shell. Clips use target
+geometry;
 intentional focus/hover remains real. Visible images, target-scoped finite
 animations, fonts and two RAFs settle before capture. No global animation wait,
 sleep, network-idle, mask, tolerance or full-page snapshot is used.
@@ -1553,12 +1563,11 @@ state mutation, global network-idle or fixed readiness delay. Gates release in
 teardown; browser contexts/routes remain Playwright-owned. No Visual spec or PNG
 changes. Static runtime does not inherit Visual's hidden floating controls.
 
-The existing `assertHeroHydration` defaults to `/`. Only English Home explicitly
-opts into `/en`, with the same width <768, one initial mismatch, SSR Footer absent,
-one client Footer, SSR Hero retention and other-errors-zero proof. The raw initial
-entry is retained, not erased; any later error still fails. This approved narrow
-extension tracks [RUNTIME-FOOTER-01](../acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01),
-not a generic hydration suppression or production fix.
+`assertHeroHydration` defaults to `/`; English Home explicitly opts into `/en`.
+Both require SSR Hero retention, one SSR Footer, one hydrated Footer and zero
+browser errors. #145-B resolved the former narrow mobile exception recorded in
+[RUNTIME-FOOTER-01](../acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01);
+that historical record does not authorize current hydration suppression.
 
 Parser-backed style policy now solely owns legacy-dark/Tailwind/deep source checks;
 its tests explicitly cover all ten retired dark class names. Exact per-file budgets

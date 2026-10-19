@@ -44,6 +44,7 @@ maintainer visual acceptance remain separate gates.
 
 #145-C1.1 uses the layout-owned `--gf-nav-content-top` (132px: 16 + 56 + 44 + 16)
 only for audited desktop entry collisions in Games Search/Detail and Site Group/Detail.
+C2 adds Collections Index after its filter was measured 12px inside the lower tier.
 It MUST NOT add global main/Home padding. Site primary tabs scroll in normal flow;
 only the desktop Aside remains sticky below this clearance. Tool Search owns its
 local underline focus cue and thin neutral scrollbar. Quick Sites sorts only from
@@ -51,6 +52,16 @@ the Pointer handle, previews without storage writes, commits once on a changed
 drop and cancels on Escape/capture loss/blur/close/route/unmount. Keyboard arrows
 preserve item focus and announce the new position. Storage format and seven-item
 limit stay unchanged. See [C1.1 acceptance](../docs/acceptance/145-c1-1-navigation-clearance-interaction-polish.md).
+
+#145-C2 records maintainer approval of A/B/C1/C1.1 and migrates only the Visual
+contracts/goldens attributable to those accepted changes. Visible clipped shells
+(including the utility tier) own matte material; the full-width header stays
+transparent. Overlay Shell captures include the complete center Search where it
+shares the lower tier’s vertical band; Header and Game Detail Overview capture the
+full viewport to avoid slicing floating shells. Right Island Search replaces the
+old ToolDock Search capture one for one. The [C2 ledger](../docs/acceptance/145-c2-integration-final-acceptance.md) records
+reviewed PNGs and exact remote gates; no historical pass or local screenshot
+substitutes for final-source Fast/Policy, Full/Image and Visual acceptance.
 
 For frontend decisions, resolve evidence in this order:
 
@@ -1297,13 +1308,12 @@ Catalog and staged handoff. The two Hero domain fixtures MUST remain separate;
 each test owns fresh catalogs, request evidence, failures and independent gates.
 Teardown MUST release API/image/IndexedDB gates and clear the active scenario;
 the worker's API resolver MUST reject access without an active scenario.
-Only the Hero-specific assertion may acknowledge the existing mobile homepage
-Footer hydration debt: width below 768, exactly one mismatch, no SSR footer,
-exactly one client footer, retained SSR Hero node, and no other browser errors.
-Its default route remains `/`; P7.2 explicitly opts English Home into exact `/en`.
-Callers MUST preserve raw initial evidence and fail on subsequent errors. See
+After #145-B, the Hero-specific assertion MUST require one SSR Footer, one
+hydrated Footer, the retained SSR Hero node and zero browser errors, including
+all hydration mismatches. Its default route remains `/`; English Home explicitly
+opts into `/en`. The former mobile exception has been removed. Historical
 [RUNTIME-FOOTER-01](../docs/acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01)
-for the owned follow-up and removal condition; no generic capture exemption exists.
+evidence does not authorize an exception in current tests.
 Generic error capture MUST NOT ignore hydration. Same-run clipped paint Buffer
 and computed-style equality MAY remain runtime invariants; success screenshots,
 computed audit JSON and golden baselines MUST NOT be introduced in P3.2.3.
@@ -1474,15 +1484,14 @@ contracts without snapshot updates. Hero lifecycle, SearchBox, QuickAccess and
 Nav content retain separate ownership.
 The P5.1.1 audit found existing Home side effects absent from its initial plan:
 null saying triggers one saying request, mounted content creates a weather iframe,
-and Mobile Home has the already-guarded Footer hydration mismatch. The approved
-fixture exceptions MUST remain exact, locally fulfilled and separately recorded;
-reuse the narrow existing hydration evidence check, never broaden generic error
-suppression. Terms remains quiet except for one separately recorded empty pattern
+and the former Mobile Footer mismatch was retired by #145-B. Exact saying/weather
+fixture boundaries remain locally fulfilled and separately recorded; Home MUST
+retain its SSR Hero/content/Footer and report zero hydration errors in both locales. Terms remains quiet except for one separately recorded empty pattern
 catalog requested only after the real BottomTab Mode action mounts Preferences.
 All other requests/errors MUST remain zero.
 
 P5.2.1 adds a separate live Home Header contract: two Functional cases own
-Search debounce/keyboard/popup/reveal lock, theme-independent computed appearance,
+Search debounce/keyboard/popup, theme-independent computed appearance,
 and Quick Sites validation/add/delete/storage. Four clipped Visual cases own
 Desktop Header, Desktop/Mobile suggestions and Desktop Quick Sites validation.
 The shared fixture keeps real SSR/hydration/Hero rendering, exact local asset
@@ -1507,23 +1516,25 @@ including mobile states. `SiteIconStrip` and its styles were deleted after a
 zero-consumer audit. The accepted Header contracts and all 42 PNGs are unchanged.
 Spotlight, ToolDock, TransitionBar, Cards and Popovers remain P5.3-owned; this
 Header migration does not authorize their cleanup.
-Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
-contract with SSR Hero retention evidence. Preserve raw errors and reject all
-later errors; Desktop retains zero browser errors. This is not a general exception.
+Mobile and Desktop Home use `assertHeroHydration` to require SSR Hero retention,
+actual SSR content/Footer and zero browser/hydration errors after #145-B. No Footer
+mismatch exception remains.
 
 P5.3.1's independent `nav-revealed-content` fixture/specs MUST use real production
-Home SSR/hydration and wheel reveal. Four runtime cases own Card typography,
+Home SSR/hydration and native wheel scrolling after #145-B. Four runtime cases own Card typography,
 Group/Site popovers (including geometric top placement and ping), fixed-time
-TransitionBar/weather/author, ToolDock directory/search/cache/popup, Spotlight
+TransitionBar/weather/author, right-island directory/search/cache/popup, Spotlight
 paging/visited/view side effects, responsive panel counts and SFW/NSFW filtering.
 The actual description cascade is 12px / 16.2px (`line-height: 1.35`), overriding
 the plan's inferred 16px; accepted computed appearance remains authority.
-Eight Light/Dark clips own Core, SitePopover, ToolDock Search and Spotlight.
+Eight Light/Dark clips own Core, SitePopover, Right Island Search and Spotlight.
+#145-C2 renames the two former `nav-tool-dock-search-*` PNGs to
+`nav-right-island-search-*`, capturing the full action shell, lower tier and panel.
 Home MUST be SSR-only exactly once per scenario; other requests are limited to
 exact fixture assets/weather and explicitly exercised directory/view/popup paths.
-No production/debt changes are authorized by this contract stage. Keep
-`.nav-content-loading` for P5.3.4 re-audit and the dynamic live
-`.nav-tool-button--search`; Site Groups/games-page coupling remains P5.4-owned.
+No new production/debt changes are authorized by this contract stage. #145-B/C1
+retired `.nav-content-loading` and the old Dock; fixtures position actual SSR
+content without restoring Reveal or altering product state.
 The eight initial goldens require pinned generation, two full comparisons and
 maintainer review before P5.3.2. Existing 42 snapshots MUST remain unchanged.
 

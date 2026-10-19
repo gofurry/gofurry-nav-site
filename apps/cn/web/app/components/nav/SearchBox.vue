@@ -278,6 +278,13 @@ function choosePlatform(index: number, restoreFocus = true) {
 }
 
 function handlePickerFocusOut(event: FocusEvent) {
+  // Desktop CSS can blur a hidden mobile control before matchMedia's callback.
+  // This focusout still proves ownership; return to the visible category now.
+  if (!mobileQuery?.matches && !event.relatedTarget) {
+    closePicker()
+    searchBoxRef.value?.querySelector<HTMLButtonElement>('.search-category-row [aria-pressed="true"]')?.focus({ preventScroll: true })
+    return
+  }
   if (!platformPicker.value?.contains(event.relatedTarget as Node | null)) closePicker()
 }
 

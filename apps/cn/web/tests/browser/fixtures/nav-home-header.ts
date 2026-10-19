@@ -292,12 +292,10 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
         async headerClip() {
           await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
           await settle(root)
-          const nav = await page.locator('.gf-nav').boundingBox()
-          expect(nav).not.toBeNull()
           const viewport = page.viewportSize()!
-          const y = Math.ceil(nav!.y + nav!.height)
           assertQuiet()
-          return { x: 0, y, width: viewport.width, height: viewport.height - y }
+          // Floating islands overlap the Hero; retain the complete two-tier shell.
+          return { x: 0, y: 0, width: viewport.width, height: viewport.height }
         },
         async searchClip() {
           await settle(search)

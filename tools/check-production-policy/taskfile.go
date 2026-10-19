@@ -121,14 +121,18 @@ func validateTaskfile(data []byte) []string {
 	if len(verifyBuilds) != 2 || !callsFrontendBuild(verifyBuilds[0], "admin/react") || !callsFrontendBuild(verifyBuilds[1], "web") {
 		problems = append(problems, "frontend verification must build both owning packages")
 	}
-	navBuild := document.Tasks["build:nav-web"].Cmds
+	navBuild := document.Tasks["build:web"].Cmds
 	if len(navBuild) != 2 || !callsFrontendBuild(navBuild[1], "web") {
 		problems = append(problems, "Nav Web must build in its owning package directory")
 	}
-	for _, frontend := range []string{"admin", "nav-web"} {
-		commands := document.Tasks["deps:"+frontend].Cmds
+	for frontend, directory := range map[string]string{"admin": "apps/cn/admin/react", "web": "apps/cn/web"} {
+		install := document.Tasks["deps:"+frontend]
+		commands := install.Cmds
 		if len(commands) != 1 || commands[0] != "pnpm install --frozen-lockfile" {
 			problems = append(problems, "non-frozen frontend install for "+frontend)
+		}
+		if install.Dir != directory {
+			problems = append(problems, "frontend install must run in the owning package directory for "+frontend)
 		}
 	}
 	return problems

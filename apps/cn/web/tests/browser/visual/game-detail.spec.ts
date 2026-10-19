@@ -7,10 +7,9 @@ for (const theme of ['light', 'dark'] as const) {
       await detail.open({ theme, width }); detail.assertInitialReads()
       await detail.settle(); await assertDetailAppearance(detail)
       await detail.page.mouse.move(1, 1)
-      const nav = await detail.page.locator('.gf-nav').boundingBox()
-      const y = Math.ceil(nav!.y + nav!.height)
       detail.assertQuiet()
-      await expect(detail.page).toHaveScreenshot(`game-detail-overview-${theme}-${device}.png`, { clip: { x: 0, y, width, height: detail.page.viewportSize()!.height - y } })
+      // Capture the full viewport: the floating lower tier must not be cut in half.
+      await expect(detail.page).toHaveScreenshot(`game-detail-overview-${theme}-${device}.png`)
     })
     test(`Detail Insights ${theme} ${device}`, async ({ detail }) => {
       await detail.open({ theme, width }); await detail.tab('insights')

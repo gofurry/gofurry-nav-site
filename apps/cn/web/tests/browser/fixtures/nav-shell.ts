@@ -12,7 +12,7 @@ type NavShell = {
   menu: Locator
   toggle: Locator
   bottomTabs: Locator
-  open(options?: { width?: number, theme?: Theme, route?: '/terms' | '/' | '/en' }): Promise<void>
+  open(options?: { width?: number, theme?: Theme, route?: '/terms' | '/terms?source=shell#review' | '/' | '/en' }): Promise<void>
   assertTheme(theme: Theme): Promise<void>
   assertLinks(locale: 'zh' | 'en', mobile?: boolean): Promise<void>
   language(locale: 'CN' | 'EN', mobile?: boolean): Locator
@@ -220,20 +220,26 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
           await settle(nav)
           const navBox = await nav.boundingBox()
           expect(navBox).not.toBeNull()
-          const last = includeMenu ? await menu.boundingBox() : navBox
-          expect(last).not.toBeNull()
+          const surfaces = await nav.locator('.gf-nav__shell:visible').all()
+          const boxes = await Promise.all(surfaces.map(shell => shell.boundingBox()))
+          if (includeMenu) boxes.push(await menu.boundingBox())
+          for (const box of boxes) expect(box).not.toBeNull()
+          const surfaceBottom = Math.max(...boxes.map(box => box!.y + box!.height))
           const viewport = page.viewportSize()!
           const y = Math.max(0, Math.floor(navBox!.y))
-          const bottom = Math.min(viewport.height, Math.ceil(last!.y + last!.height + 20))
+          // The accepted center search overlaps the lower tier vertically (not
+          // horizontally). Include it completely instead of slicing its category row.
+          const search = home ? await page.locator('.nav-header__search').boundingBox() : null
+          const bottom = Math.min(viewport.height, Math.ceil(Math.max(surfaceBottom + 20, search ? search.y + search.height + 12 : 0)))
           expect(navBox!.y).toBeGreaterThanOrEqual(-1)
-          expect(last!.y + last!.height).toBeLessThanOrEqual(viewport.height)
+          expect(surfaceBottom).toBeLessThanOrEqual(viewport.height)
           const clip = { x: 0, y, width: viewport.width, height: bottom - y }
           expect(clip.height).toBeGreaterThan(navBox!.height)
           if (home) {
-            for (const selector of ['.nav-header__search', '.nav-header__quick-access']) {
+            for (const selector of ['.nav-header__quick-access']) {
               const box = await page.locator(selector).boundingBox()
               expect(box).not.toBeNull()
-              expect(box!.y, 'SearchBox/QuickAccess must stay outside the Nav golden').toBeGreaterThanOrEqual(bottom)
+              expect(box!.y, 'QuickAccess must stay outside the Nav golden').toBeGreaterThanOrEqual(bottom)
             }
           }
           assertQuiet()

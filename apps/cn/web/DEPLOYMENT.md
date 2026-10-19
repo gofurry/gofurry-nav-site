@@ -7,6 +7,30 @@ For the alpha.9 release, use the [cross-service upgrade guide](../../../docs/rel
 The frontend-only engineering changes require no new runtime variables, but the
 full alpha.8 → alpha.9 upgrade also includes backend/schema changes.
 
+## #145 frontend handoff (maintainer only)
+
+Use the [C2 acceptance ledger](../../../docs/acceptance/145-c2-integration-final-acceptance.md)
+for the actual accepted source and Fast/Repository Policy, Full four groups/image,
+and Visual results. Deployment is blocked until every required gate passes.
+The repository default branch is `main`; `git pull --ff-only` updates only the
+server's current branch, never imports `dev` into `main`. Confirm that the chosen
+deployment branch contains the accepted C2 source. If production uses `main`,
+merge through the approved process first and confirm that branch's Full gate.
+
+Before pulling, check branch/status, retain a usable prior image plus matching
+private configuration, and confirm sufficient build memory. From `apps/cn/web`,
+validate Compose quietly (`docker compose -f docker-compose.prod.yml config -q`)
+and inspect only its project name: it must remain `nav-web`. Then the maintainer
+may run `./update.sh`, inspect Compose status and `/healthz`, and smoke-test `/`,
+`/en`, `/games`, `/games/search`, `/site/:id` and `/site-groups/:id` on desktop/mobile.
+Check natural scrolling, navigation handoff, utility search, shortcut sorting and
+zero hydration/JS errors. C2 includes no database migration or backend restart.
+
+`update.sh` builds and replaces containers; Codex does not execute it. On failure,
+do not force a switch or prune. Recover with the retained image and configuration;
+pulling old source alone is not image rollback. Close #145 only after maintainer
+deployment and production smoke acceptance.
+
 ## Existing installation: workspace rename (maintainer only)
 
 The source moved from `apps/cn/nav-web` to `apps/cn/web`. The maintainer confirmed
@@ -114,7 +138,7 @@ The dependency stage bootstraps the exact pnpm version from `packageManager`,
 then installs `pnpm-lock.yaml` with `--frozen-lockfile` and project-local script
 permissions. The complete-source stage runs `pnpm exec nuxt prepare` and
 `pnpm run build`. For a local image-only check use root `task doctor:docker` and
-`task build:nav-web-image`; neither starts containers nor invokes `update.sh`.
+`task build:web-image`; neither starts containers nor invokes `update.sh`.
 
 ## nginx change for `go-furry.com`
 

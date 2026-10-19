@@ -5,7 +5,8 @@ for (const theme of ['light', 'dark'] as const) {
     const scene = await revealed.open({ width: 1000, theme })
     await scene.reveal()
     await scene.alignContent()
-    await expect(scene.dock).toBeHidden()
+    await expect(scene.rail).toBeVisible()
+    await expect(scene.page.locator('.tool-dock')).toHaveCount(0)
     await expect(scene.bar.locator('.nav-transition-bar__time')).toHaveText('2026年9月18日 12:40')
     await scene.quoteTrigger.focus()
     await expect(scene.author).toHaveText(quote.author)
@@ -30,23 +31,25 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(scene.page).toHaveScreenshot(`nav-site-popover-${theme}-desktop.png`, { clip })
   })
 
-  test(`ToolDock Search / ${theme}`, async ({ revealed }) => {
+  test(`Right Island Search / ${theme}`, async ({ revealed }) => {
     const scene = await revealed.open({ theme })
     await scene.reveal()
     await scene.openSearch()
     await scene.searchInput.fill('wolf')
     await expect(scene.results.locator('strong')).toHaveText(['Wolf Community', 'Wolf Archive'])
-    await scene.results.first().hover()
+    await scene.page.mouse.move(1, 1)
     await expect(scene.searchInput).toBeFocused()
-    const clip = await scene.clip([scene.rail, scene.searchPanel])
-    await expect(scene.page).toHaveScreenshot(`nav-tool-dock-search-${theme}-desktop.png`, { clip })
+    const shell = scene.page.locator('.gf-nav__actions .gf-nav__shell:visible')
+    const clip = await scene.clip([shell, scene.rail, scene.searchPanel])
+    await expect(scene.page).toHaveScreenshot(`nav-right-island-search-${theme}-desktop.png`, { clip })
   })
 
   test(`Spotlight / ${theme}`, async ({ revealed }) => {
     const scene = await revealed.open({ width: 960, theme })
     await scene.reveal()
     await scene.alignContent()
-    await expect(scene.dock).toBeHidden()
+    await expect(scene.rail).toBeVisible()
+    await expect(scene.page.locator('.tool-dock')).toHaveCount(0)
     await expect(scene.content.locator('.spotlight-panel:visible')).toHaveCount(2)
     for (const panel of [scene.featured, scene.popular]) {
       await expect(panel.locator('.spotlight-panel__pager span')).toHaveText('1/2')

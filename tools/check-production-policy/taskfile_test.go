@@ -12,6 +12,7 @@ func TestTaskfileReleaseContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	data = []byte(strings.ReplaceAll(string(data), "\r\n", "\n"))
 	if problems := validateTaskfile(data); len(problems) != 0 {
 		t.Fatal(problems)
 	}
@@ -23,6 +24,11 @@ func TestTaskfileReleaseContract(t *testing.T) {
 		{"flags lost", "-trimpath", ""},
 		{"artifact renamed", "ARTIFACT: gf-nav}", "ARTIFACT: other}"},
 		{"unfrozen install", "pnpm install --frozen-lockfile", "pnpm install"},
+		{"old web install task", "  deps:web:", "  deps:nav-web:"},
+		{"old web build task", "  build:web:", "  build:nav-web:"},
+		{"unfrozen web install", "dir: apps/cn/web\n    cmds:\n      - pnpm install --frozen-lockfile", "dir: apps/cn/web\n    cmds:\n      - pnpm install"},
+		{"web install in root", "dir: apps/cn/web", "dir: '.'"},
+		{"admin install in root", "dir: apps/cn/admin/react", "dir: '.'"},
 		{"frontend build in root", "dir: 'apps/cn/{{.FRONTEND}}'", "dir: '.'"},
 		{"frontend verify bypasses package cwd", "- task: _frontend-build", "- cmd: pnpm --dir apps/cn/admin/react run build"},
 		{"wrong frontend build target", "vars: {FRONTEND: web}", "vars: {FRONTEND: admin/react}"},

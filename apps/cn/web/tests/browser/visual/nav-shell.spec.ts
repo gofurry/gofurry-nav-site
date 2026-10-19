@@ -1,4 +1,21 @@
 import { test, expect } from '../fixtures/nav-shell'
+import type { Locator } from '@playwright/test'
+
+async function assertIslandMaterial(nav: Locator) {
+  await expect(nav).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(nav).toHaveCSS('border-width', '0px')
+  await expect(nav).toHaveCSS('box-shadow', 'none')
+  const shells = nav.locator('.gf-nav__shell:visible')
+  await expect(shells).toHaveCount(2)
+  for (const shell of await shells.all()) {
+    await expect(shell).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(shell).toHaveCSS('backdrop-filter', /blur\(/)
+    await expect(shell).toHaveCSS('border-width', '0px')
+    await expect(shell).toHaveCSS('box-shadow', 'none')
+    await expect(shell).toHaveCSS('background-image', 'none')
+    await expect(shell.locator('path')).toHaveCSS('stroke', 'none')
+  }
+}
 
 for (const theme of ['light', 'dark'] as const) {
   test(`Nav Shell: Standard Desktop / ${theme}`, async ({ page, navShell }) => {
@@ -11,12 +28,8 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(nav.getByRole('button', { name: '切换明暗主题图标', exact: true })).toBeVisible()
     await expect(nav.getByRole('button', { name: '模式', exact: true })).toBeVisible()
     await expect(toggle).toBeHidden()
-    await expect(nav).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-    await expect(nav).toHaveCSS('border-bottom-style', 'solid')
-    await expect(nav).not.toHaveCSS('border-bottom-width', '0px')
-    await expect(nav).not.toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)')
-    await expect(nav).not.toHaveCSS('box-shadow', 'none')
-    await expect(nav).toHaveCSS('backdrop-filter', /blur\(/)
+    await assertIslandMaterial(nav)
+    await expect(nav.locator('.gf-nav__utility-row > a, .gf-nav__utility-row > button')).toHaveCount(3)
     const clip = await navShell.navClip()
     await expect(page).toHaveScreenshot(`nav-shell-standard-${theme}-desktop.png`, { clip })
   })
@@ -27,11 +40,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(nav).toHaveClass(/\bgf-nav--overlay\b/)
     await expect(nav.locator('nav').getByRole('link', { name: '站点导航', exact: true })).toHaveClass(/\bgf-nav__link--active\b/)
     await navShell.assertLanguage('CN')
-    await expect(nav).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-    await expect(nav).toHaveCSS('border-bottom-style', 'solid')
-    await expect(nav).not.toHaveCSS('border-bottom-width', '0px')
-    await expect(nav).not.toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)')
-    await expect(nav).toHaveCSS('backdrop-filter', /blur\(/)
+    await assertIslandMaterial(nav)
     const clip = await navShell.navClip()
     await expect(page).toHaveScreenshot(`nav-shell-overlay-${theme}-desktop.png`, { clip })
   })
@@ -54,7 +63,10 @@ for (const theme of ['light', 'dark'] as const) {
 
   test(`Nav Shell: Home active BottomTab / ${theme}`, async ({ page, navShell }) => {
     await navShell.open({ route: '/', width: 390, theme })
-    await navShell.scrollTo(73)
+    // Home hands off as content reaches the viewport midpoint, after the top shell exits.
+    const hero = await page.locator('.nav-header').boundingBox()
+    const header = await navShell.nav.boundingBox()
+    await navShell.scrollTo(Math.ceil(Math.max(header!.y + header!.height + 8, hero!.y + hero!.height - page.viewportSize()!.height / 2)) + 16)
     await navShell.assertBottomTabs(true)
     const { bottomTabs } = navShell
     const home = bottomTabs.getByRole('link', { name: '站点导航', exact: true })

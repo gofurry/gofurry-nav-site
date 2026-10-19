@@ -180,11 +180,13 @@ the hint requires 24px of actual clearance below search/Quick Access.
 Site primary tabs scroll naturally after #145-C1.1; the desktop Aside alone keeps
 sticky clearance. A layout-owned 132px desktop safe top is opt-in for audited
 Games Search/Detail and Site Group/Detail entries, without global main padding.
+C2 applies that same existing clearance to the measured Collections Index collision.
 #145-B replaces Home
 Reveal with native scrolling and SSR content; its obsolete target margin is removed.
 Menu exit is inert immediately, and Reduced Motion retains #139's local rules.
 The prior P5 appearance statements above describe that migration's baseline;
-new pixels require #145-C review, not an automatic Golden update.
+A/B/C1/C1.1 appearance has maintainer approval. #145-C2 records reviewed pinned
+Golden migration and final gates separately; it does not authorize new design.
 
 #145-A2 centers the single row of native category buttons within the input width;
 only overflowing labels scroll horizontally. Mobile Search uses an inline platform

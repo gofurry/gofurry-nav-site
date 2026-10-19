@@ -6,6 +6,26 @@ import SearchBox from '../../app/components/nav/SearchBox.vue'
 
 afterEach(() => vi.restoreAllMocks())
 
+it('returns focus when desktop CSS blurs the mobile picker before its media change callback', async () => {
+  const media = Object.assign(new EventTarget(), { matches: true }) as MediaQueryList
+  vi.spyOn(window, 'matchMedia').mockReturnValue(media)
+  const view = await mountSuspended(SearchBox, { attachTo: document.body })
+  try {
+    const trigger = view.find<HTMLButtonElement>('.search-platform-trigger')
+    trigger.element.focus()
+    await trigger.trigger('click')
+    expect(trigger.attributes('aria-expanded')).toBe('true')
+    Object.assign(media, { matches: false })
+    // display:none can remove activeElement before matchMedia dispatches change.
+    trigger.element.blur()
+    await view.find('.search-platform-picker').trigger('focusout', { relatedTarget: null })
+    media.dispatchEvent(new Event('change'))
+    await nextTick()
+    expect(view.findAll('.search-platform-picker button')).toHaveLength(1)
+    expect(document.activeElement).toBe(view.find('.search-category-row [aria-pressed="true"]').element)
+  } finally { view.unmount() }
+})
+
 it('resets stable provider slots on live locale changes and cleans up the picker media subscription', async () => {
   const i18n = useNuxtApp().$i18n
   const originalLocale = i18n.locale.value

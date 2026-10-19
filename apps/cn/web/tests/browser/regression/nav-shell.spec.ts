@@ -398,8 +398,7 @@ for (const width of [375, 390, 430, 640, 767]) {
 }
 
 test('145-A locale keeps query/hash and history restores mobile handoff without moving the page', async ({ page, navShell }) => {
-  await navShell.open({ width: 640 })
-  await page.goto('/terms?source=shell#review')
+  await navShell.open({ width: 640, route: '/terms?source=shell#review' })
   await navShell.language('EN').click()
   await expect(page).toHaveURL(/\/en\/terms\?source=shell#review$/)
   await navShell.toggle.click()

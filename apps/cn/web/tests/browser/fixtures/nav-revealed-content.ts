@@ -307,9 +307,12 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
             assertQuiet()
           },
           async alignContent() {
-            await shell.evaluate(element => window.scrollTo({ top: element.getBoundingClientRect().top + scrollY - (innerWidth >= 768 ? 88 : 0), behavior: 'instant' }))
+            await shell.evaluate(element => {
+              const margin = innerWidth >= 768 ? parseFloat(getComputedStyle(element).getPropertyValue('--gf-nav-content-top')) : 0
+              window.scrollTo({ top: element.getBoundingClientRect().top + scrollY - margin, behavior: 'instant' })
+            })
             await expect.poll(() => shell.evaluate(element => {
-              const margin = innerWidth >= 768 ? 88 : 0
+              const margin = innerWidth >= 768 ? parseFloat(getComputedStyle(element).getPropertyValue('--gf-nav-content-top')) : 0
               const target = Math.max(0, Math.min(element.getBoundingClientRect().top + scrollY - margin, document.documentElement.scrollHeight - innerHeight))
               return Math.abs(scrollY - target)
             })).toBeLessThanOrEqual(1)
