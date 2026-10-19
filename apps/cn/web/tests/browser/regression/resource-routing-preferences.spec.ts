@@ -66,8 +66,14 @@ test('routing controls keep focus indication and work at 390px in light and dark
   await expect(cloudflare).toBeFocused()
   expect(await cloudflare.evaluate(el => getComputedStyle(el.closest('label')!).outlineStyle)).not.toBe('none')
 
-  // Preserve the legacy resize-after-hydration scenario, not a new mobile SSR scope.
+  // #145 hands ownership back to the mobile shell at the breakpoint.
+  // Reopen through its real menu while preserving the resize-after-hydration case.
   await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.locator('.gf-preferences-modal')).toHaveCount(0)
+  await expect(page.locator('.gf-nav__brand')).toBeFocused()
+  await page.locator('.gf-nav__mobile-toggle').click()
+  await page.locator('.gf-nav__mobile-panel .gf-nav__mobile-action').click()
+  await page.locator('.preferences-tabs').getByRole('tab').last().click()
   await routing.settleTab(2)
   const routingPage = page.locator('.preferences-page').nth(2)
   expect(await routingPage.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)

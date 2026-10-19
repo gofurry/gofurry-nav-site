@@ -37,8 +37,8 @@ go run ./check-production-policy
 | Nuxt nav-utilities + nav-custom-sites / search-platform-picker | PASS，6/6 + 2/2（后者包含新增失焦反例） |
 | 最终构建 / Functional | PASS；首轮 87 PASS / 2 FAIL，修复后相关 11/11 PASS（不重复无变化用例） |
 | Visual 审查后定向更新 / 独立只读 compare | PASS，94/94；首次失败历史见下文 |
-| 最终源码 Fast / Repository Policy | 首轮 PASS；后续测试契约修复后等待最终源码验证 |
-| 最终源码 Full 四组 / Docker Image / Gate | 首轮 Gate FAIL；构建/镜像 PASS，修复证据见下文 |
+| Fast / Repository Policy | R0、R1 PASS；最后单项测试修正后的自动检查待记录 |
+| Full 四组 / Docker Image / Gate | R1 三组 PASS，Insights Nav 取消、Gate FAIL；最后失败用例本地修复 PASS，依维护者要求不再重跑整套 Full |
 | 最终源码完整 Visual | NOT RUN |
 | 生产部署与冒烟 | NOT RUN，维护者执行 |
 
@@ -249,6 +249,13 @@ pnpm run test:visual --grep '<all 94 reviewed test titles>$' <15 reviewed owners
 - 完整 Visual：NOT RUN，等待修复后的 Full 完成后顺序触发。
 
 补测同一 clock helper 影响的 Slow artwork 用例 **1/1 PASS**（`functional-slow-artwork.log`）。首次 grep 使用开头锚点未匹配 Playwright 的完整测试标题，零用例执行；改为该唯一标题后正常验证，未增加 retry。
+
+第二轮测试修正源码 **R1 = `9888b519df44c5fc20cd22a17bc29d6e2d426d72`**。推回后确认远端 dev 与 R1 一致；R0→R1 仅测试/fixture 与当前文档，产品代码和 136 张 Golden 字节未再变化。
+
+- [R1 Fast / Repository Policy](https://github.com/gofurry/gofurry-nav-site/actions/runs/39303254301)：**PASS**，`headSha=R1`，全部所需作业成功。
+- [第二轮 Full](https://github.com/gofurry/gofurry-nav-site/actions/runs/39303260445)：`headSha=R1`，构建与 Docker Image PASS；Games **227/227 PASS**、Sites/Other **304/304 PASS**、Insights Core **218/218 PASS**。Insights Nav 的 Resources 设置用例在手机断点后仍等待已经按 A 阶段契约关闭的弹窗，耗尽 60 秒；整组运行至 343/345 时达到原 10 分钟 Job 时限而取消，最终 Gate **FAIL**。不能称 Full 全绿。
+- 最后只修 `resource-routing-preferences.spec.ts`：断点后明确断言弹窗移除与品牌焦点，再经真实手机菜单重开设置，保留 390px Light/Dark、radio、焦点和保存断言。原用例确定性 FAIL；修正后 **1/1 PASS**（2.6s），文件 ESLint PASS，日志 `resource-focus-before.log` / `resource-focus-after.log`。
+- 维护者随后明确要求避免重复大量 CI。本轮不再手动重跑 Full；保留 R1 的三组、构建与镜像证据，但最后测试修正提交的整套 Full/Gate 为 **NOT RUN / PENDING**。完整 Visual 尚未运行，仍只触发一次。未修改超时、重试、断言强度或工作流。
 
 ## 性能与部署交接
 
