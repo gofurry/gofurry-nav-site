@@ -232,8 +232,6 @@ html.dark .site-detail-page {
 }
 
 .site-detail-context {
-  top: calc(var(--site-detail-tabs-height) + 1.25rem);
-
   border-radius: var(--site-detail-radius);
   padding: 1rem;
   background: var(--site-detail-panel);
@@ -945,10 +943,6 @@ html.dark .site-detail-page {
 
 
 // Site discovery shares the existing panel material and soft row interaction.
-.site-detail-aside {
-  top: calc(var(--site-detail-tabs-height) + 1.25rem);
-}
-
 .site-detail-similar {
   border-radius: var(--site-detail-radius);
   padding: 1rem;
@@ -993,9 +987,4 @@ html.dark .site-detail-page {
   color: var(--gf-text-muted);
   font-size: 0.7rem;
   line-height: 1.5;
-}
-
-@media (min-width: 768px) {
-  .site-detail-context,
-  .site-detail-aside { top: calc(88px + var(--site-detail-tabs-height) + 1.25rem); }
 }

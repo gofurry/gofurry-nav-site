@@ -177,7 +177,10 @@ Active icons use color, not inner cards. At >=768px the brand hides after 80px a
 returns at 24px, deferring while focused; right navigation remains fixed. The
 desktop Hero center group moves down 24px, except at short heights <=520px;
 the hint requires 24px of actual clearance below search/Quick Access.
-Site tabs and Context respect the fixed desktop header. #145-B replaces Home
+Site primary tabs scroll naturally after #145-C1.1; the desktop Aside alone keeps
+sticky clearance. A layout-owned 132px desktop safe top is opt-in for audited
+Games Search/Detail and Site Group/Detail entries, without global main padding.
+#145-B replaces Home
 Reveal with native scrolling and SSR content; its obsolete target margin is removed.
 Menu exit is inert immediately, and Reduced Motion retains #139's local rules.
 The prior P5 appearance statements above describe that migration's baseline;
@@ -194,6 +197,14 @@ category/locale/route/breakpoint changes and unmount close the grid. Opening can
 suggestions; #145-B removes the obsolete Search Reveal lock. Local Vue Transition + Less
 owns 180ms opacity/4px entry, instant exit and live Reduced Motion. Desktop Search
 retains its existing provider list. No global Picker abstraction is introduced.
+
+#145-C1.1 Tool Search uses a local bottom-edge focus cue and 5px WebKit / thin
+standard neutral scrollbar. Quick Sites close/delete actions share 32px gray
+circles inside 40px hit areas and regular Phosphor X icons. Only the grip starts
+Pointer sorting; one opaque row follows the pointer and neighbors shift over
+200ms, with immediate Reduced behavior. Cancellation removes all offsets; keyboard
+sorting keeps the same handle focused. The existing 180/220ms modal now uses only
+opacity and 4px translation, with local dialog focus/escape handling.
 
 ## Nav Home Header appearance
 

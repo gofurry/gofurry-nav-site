@@ -248,10 +248,24 @@ html.dark .mobile-bottom-tabs {
 }
 .gf-nav__search-input input::placeholder { color: var(--gf-nav-text-muted); }
 .gf-nav__search-input input:focus-visible {
-  outline: 2px solid var(--gf-nav-active-text);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--gf-nav-text-muted) 60%, transparent);
 }
-.gf-nav__search-results { max-height: min(18rem, calc(100dvh - 12rem)); }
+.gf-nav__search-results {
+  max-height: min(18rem, calc(100dvh - 12rem));
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gf-nav-text-muted) 38%, transparent) transparent;
+}
+.gf-nav__search-results::-webkit-scrollbar { width: 5px; height: 5px; }
+.gf-nav__search-results::-webkit-scrollbar-track { background: transparent; }
+.gf-nav__search-results::-webkit-scrollbar-thumb {
+  border: 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--gf-nav-text-muted) 38%, transparent);
+}
+.gf-nav__search-results::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--gf-nav-text-muted) 55%, transparent);
+}
 .gf-nav__search-results button {
   border: 0;
   border-radius: var(--gf-radius-sm);

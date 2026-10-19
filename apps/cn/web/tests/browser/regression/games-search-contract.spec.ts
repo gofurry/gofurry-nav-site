@@ -1,4 +1,15 @@
 import { test, expect, assertSearchAppearance } from '../fixtures/games-search'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+for (const width of [390, 768, 900, 1024, 1440]) {
+  test(`145-C1.1 Search toolbar clearance ${width}`, async ({ search }) => {
+    await search.page.setViewportSize({ width, height: 900 })
+    await search.open({ locale: width === 900 ? 'zh' : 'en', theme: width === 1024 ? 'dark' : 'light' })
+    await assertNavigationClearance(search.page, '.search-toolbar input, .search-filter-button', `games-search-${width}`)
+    await search.openFilter(); await search.cancel()
+    search.assertQuiet()
+  })
+}
 
 for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
   test(`English Search ready shell ${width} ${theme}`, async ({ search }) => {

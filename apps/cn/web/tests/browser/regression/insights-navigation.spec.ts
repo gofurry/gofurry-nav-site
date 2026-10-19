@@ -1,4 +1,16 @@
 import { test, expect, openRuntime, keyboardFocus } from '../fixtures/insights-domain'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+for (const route of ['/insights/sites', '/en/insights/games']) {
+  test(`145-C1.1 Insights navigation clearance ${route}`, async ({ page, runtime }) => {
+    await openRuntime(page, route)
+    for (const width of [390, 768, 900, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await assertNavigationClearance(page, '.insights-primary-nav a, .insights-domain-nav a', `insights-${route.includes('games') ? 'games' : 'sites'}-${width}`)
+    }
+    runtime.assertQuiet()
+  })
+}
 
 test('Insights navigation retains its plain hierarchy and real Light/Dark public canvas', async ({ page, request, runtime }) => {
   const html = await openRuntime(page, '/insights/sites?metric=ipv6&range=30d&dimension=country')

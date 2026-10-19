@@ -72,7 +72,7 @@ type State = {
   pages: Array<{ page: Page, errors: string[] }>
 }
 type Worker = { app: App, current: State | null }
-type OpenOptions = { width?: number, theme?: 'light' | 'dark', mode?: 'sfw' | 'nsfw', lang?: 'zh' | 'en', dataset?: 'full' | 'partial' | 'empty' }
+type OpenOptions = { width?: number, theme?: 'light' | 'dark', mode?: 'sfw' | 'nsfw', lang?: 'zh' | 'en', dataset?: 'full' | 'partial' | 'empty', largeDirectory?: boolean }
 type Scene = {
   page: Page
   data: State['data']
@@ -163,7 +163,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
       await route.abort('blockedbyclient')
     })
     try {
-      await use({ async open({ width = 1440, theme = 'light', mode = 'sfw', lang = 'zh', dataset = 'full' } = {}) {
+      await use({ async open({ width = 1440, theme = 'light', mode = 'sfw', lang = 'zh', dataset = 'full', largeDirectory = false } = {}) {
         // A second open starts a fresh document/storage/data scenario, never a
         // mode-change event or internal Vue mutation. Close old timers first.
         const previous = scenes.at(-1)
@@ -176,6 +176,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
         const state: State = { lang, data: scenarioData(), upstream: [], directoryAllowed: false, preferencesAllowed: false,
           expectedViews: new Set(), expectedPopups: new Set(), browserAPI: [], assets: [],
           weather: [], popups: [], external: [], failures: [], pages: [] }
+        if (largeDirectory) state.data.directory.push(...Array.from({ length: 8 }, (_, index) => site(701 + index, `Wolf Resource ${index + 1}`)))
         if (dataset !== 'full') {
           state.data.home.groups = []
           state.data.home.spotlight = { page_size: 6, featured: dataset === 'partial' ? state.data.featured : [], popular: [], latest: [], random: [] }

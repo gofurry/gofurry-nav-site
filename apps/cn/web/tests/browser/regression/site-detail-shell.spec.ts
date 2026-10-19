@@ -1,5 +1,15 @@
 import type { Page } from '@playwright/test'
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface, longTarget } from '../fixtures/site-detail'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+for (const width of [390, 768, 900, 1024, 1440]) {
+  test(`145-C1.1 Site Detail clearance ${width}`, async ({ page, runtime }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await openSite(page, `${width === 900 ? '' : '/en'}/site/41?tab=overview`)
+    await assertNavigationClearance(page, '[data-site-hero] h1, [data-site-hero] a', `site-detail-${width}`)
+    runtime.assertQuiet()
+  })
+}
 
 const tab = (page: Page, key: string) => page.locator('[data-site-primary-tab="' + key + '"]')
 const trigger = (page: Page) => page.locator('[data-site-target-trigger]')
@@ -223,7 +233,7 @@ test('pending Target preserves shell and a late response cannot overwrite a newe
   } finally { held.release() }
 })
 
-test('missing Target evidence stays unknown and sticky tabs leave Hero/health in normal flow', async ({ page, runtime }) => {
+test('missing Target evidence stays unknown and primary tabs scroll away in normal flow', async ({ page, runtime }) => {
   runtime.state.noTargetEvidence = true
   runtime.state.missingSummary = true
   await page.setViewportSize({ width: 1440, height: 700 })
@@ -235,11 +245,23 @@ test('missing Target evidence stays unknown and sticky tabs leave Hero/health in
     const row = document.querySelector('[data-site-primary-tabs]')!
     window.scrollTo(0, row.getBoundingClientRect().top + window.scrollY + 100)
   })
-  await expect.poll(() => page.locator('[data-site-primary-tabs]').evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(88)
+  await expect.poll(() => page.locator('[data-site-primary-tabs]').evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(-100)
+  await expect(page.locator('[data-site-primary-tabs]')).toHaveCSS('position', 'relative')
   expect(await page.locator('[data-site-hero]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
   expect(await page.locator('[data-site-health-strip]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
-  expect(await page.locator('[data-site-target-context]').evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(144)
-  await assertRuntimeSurface(page, '[data-site-detail]', 'light')
+  const islandBottom = await page.locator('.gf-nav__actions .gf-nav__shell:visible').evaluate(node => node.getBoundingClientRect().bottom)
+  expect(await page.locator('[data-site-target-context]').evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(islandBottom + 12)
   expect(runtime.calls).toHaveLength(4)
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await tab(page, 'overview').focus()
+  await page.keyboard.press('ArrowRight')
+  await activeTab(page, 'observation')
+  await expect(tab(page, 'observation')).toBeFocused()
+  await expect(page).toHaveURL(/\/en\/site\/41$/) // Observation/Performance is the existing canonical default.
+  await assertRuntimeSurface(page, '[data-site-detail]', 'light')
+  expect(runtime.count('/sites/41/detail')).toBe(1)
+  expect(runtime.count('/sites/41/insights')).toBe(1)
+  expect(runtime.count('/sites/41/view')).toBe(1)
+  await expect.poll(() => runtime.calls.length).toBe(5) // The explicit Observation entry owns one history request.
   runtime.assertQuiet()
 })

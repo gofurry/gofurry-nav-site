@@ -1,6 +1,6 @@
 <template>
   <div data-site-detail :data-site-target="sitePageData.domain" :data-site-tab="routeState.tab" class="site-detail-page relative isolate min-h-full min-w-0">
-    <main class="relative mx-auto w-full min-w-0 max-w-[1560px] px-4 pb-10 pt-[88px] sm:px-8 md:pt-[104px] lg:px-10">
+    <main class="relative mx-auto w-full min-w-0 max-w-[1560px] px-4 pb-10 pt-[88px] sm:px-8 md:pt-[var(--gf-nav-content-top)] lg:px-10">
       <div data-site-identity-note class="site-detail-identity-note min-w-0">
         <SiteDetailHero
           :site="sitePageData.siteInfo" :name="siteName" :domain="sitePageData.domain"
@@ -12,7 +12,7 @@
       </div>
       <SitePrimaryTabs :active="routeState.tab" :has-similar="hasSimilar" :aux-active="mobileAuxTab === 'similar'" :desktop="isDesktop" class="mt-6" @select="changeTab" @similar="mobileAuxTab = 'similar'" />
       <div class="mt-5 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] xl:gap-6">
-        <div data-site-detail-aside class="site-detail-aside min-w-0 space-y-5 xl:sticky xl:order-2">
+        <div data-site-detail-aside class="site-detail-aside min-w-0 space-y-5 xl:sticky xl:top-[var(--gf-nav-content-top)] xl:order-2">
           <SiteTargetContext
             :presentation="targetPresentation" :pending="pending"
             :selected="routeState.domain || sitePageData.domain" :site-scope="routeState.tab === 'insights'"

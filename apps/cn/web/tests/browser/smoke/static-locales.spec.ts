@@ -1,4 +1,14 @@
 import { test, expect, openRuntime, settleRuntime } from '../fixtures/static-runtime'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+test('145-C1.1 Static entry clearance', async ({ page, runtime }) => {
+  await openRuntime(page, '/en/terms')
+  for (const width of [390, 768, 900, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await assertNavigationClearance(page, '.gf-static-page h1', `static-${width}`)
+  }
+  runtime.assertQuiet()
+})
 
 // The Chinese About/Terms combinations already belong to Static Visual.
 const routes = [

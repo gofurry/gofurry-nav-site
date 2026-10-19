@@ -42,6 +42,16 @@ MUST preserve B's natural scrolling and actual SSR. See the
 [C1 record](../docs/acceptance/145-c1-twin-island-utility.md); Visual Golden and
 maintainer visual acceptance remain separate gates.
 
+#145-C1.1 uses the layout-owned `--gf-nav-content-top` (132px: 16 + 56 + 44 + 16)
+only for audited desktop entry collisions in Games Search/Detail and Site Group/Detail.
+It MUST NOT add global main/Home padding. Site primary tabs scroll in normal flow;
+only the desktop Aside remains sticky below this clearance. Tool Search owns its
+local underline focus cue and thin neutral scrollbar. Quick Sites sorts only from
+the Pointer handle, previews without storage writes, commits once on a changed
+drop and cancels on Escape/capture loss/blur/close/route/unmount. Keyboard arrows
+preserve item focus and announce the new position. Storage format and seven-item
+limit stay unchanged. See [C1.1 acceptance](../docs/acceptance/145-c1-1-navigation-clearance-interaction-polish.md).
+
 For frontend decisions, resolve evidence in this order:
 
 1. Executable code and tests for actual behavior and compatibility.
@@ -140,10 +150,10 @@ Visit uses observed HTTP final URL, falling back to the selected Target over HTT
 
 Four primary tabs use the P1 route-state helpers and router history, with roving
 focus and ArrowLeft/ArrowRight/Home/End support. P2 introduced no secondary
-navigation; P4 owns Observation's secondary views. After #145-A, primary tabs
-stick below the floating NavBar at widths >=768px; on mobile the public NavBar
-is an absolute overlay that scrolls away (#145-A1); primary tabs still stick at
-the viewport top.
+navigation; P4 owns Observation's secondary views. #145-C1.1 removes the primary
+tabs' former 88px desktop / 0px mobile sticky position: they now scroll away in
+normal flow at all widths. Keep route history, roving focus and horizontal tab
+visibility; only the `xl` Aside follows below the public navigation clearance.
 At `xl` the workspace/context tracks are 3:1 with
 a bounded minimum sidebar; smaller viewports place compact context before the
 workspace, retaining Target/protocol/time while infrastructure detail stays in

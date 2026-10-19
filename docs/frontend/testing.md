@@ -34,7 +34,7 @@ older phase records and accepted Visual goldens remain unchanged.
 768/1024 breakpoints, target-language switching with query/hash, menu teardown,
 Home Hero/absolute-header handoff with top-reset hysteresis, and browser history.
 Preferences retains actual opener focus; Home Header checks Quick Modal layering;
-Site Shell checks sticky clearance. These use the existing Nitro fixtures and
+Site Shell checks natural primary-tab scrolling and desktop Aside clearance. These use the existing Nitro fixtures and
 request ledgers. #145-A2 replaces the Sheet assertions with actual inline Picker
 slot order/exchange, category centering/overflow, provider URLs, cancellation,
 instant removal, natural Tab order and live Reduced Motion. Shell also verifies
@@ -51,6 +51,15 @@ with `GOFURRY_145_REVIEW=1`; they are not Golden or human acceptance.
 C1 screenshots use root `.cache/145-c1-review/` with `GOFURRY_145_C1_REVIEW=1`.
 Existing Nav Shell/full-page Visual pixels await #145-C2; C1 does not authorize
 snapshot updates. See the [C1 record](../acceptance/145-c1-twin-island-utility.md).
+
+C1.1 adds actual shell-bottom/hit-test evidence to the existing Games Search/Detail,
+Site Group/Detail owners at 390/768/900/1024/1440. Other inspected entry owners
+retain their layout when no conflict is measured. Home Header tests real Pointer
+capture, preview versus one storage commit, cancellation, keyboard/live Reduced,
+seven entries and dialog focus; `nav-custom-sites.nuxt.test.ts` checks fresh-mount
+persistence and route/unmount cleanup. Tool Search tests its local focus/scrollbar
+without relaxing directory/network checks. `GOFURRY_145_C1_1_REVIEW=final` captures
+review evidence under root `.cache/145-c1-1-review/final/`, never Golden.
 
 ## Games Home optional recovery (#140-C follow-up)
 
@@ -303,7 +312,8 @@ Current audit and verification evidence lives in the
 Light/Dark runtime geometry, long hostnames, four router tabs, reload/history,
 roving keyboard focus, selector pointer/touch/keyboard/dismissal/focus return,
 keyboard visibility within a long scrollable Target list,
-unknown Target evidence and sticky geometry. An explicit upstream gate holds
+unknown Target evidence, naturally scrolling primary tabs and the desktop sticky
+Aside's navigation clearance (#145-C1.1). An explicit upstream gate holds
 Target A while B completes; it asserts retained Hero/tabs, local pending state,
 the latest Target's evidence after A releases, and exact Detail/Insights/View
 counts. No sleeps, network-idle waits, retries, diagnostic exceptions or new

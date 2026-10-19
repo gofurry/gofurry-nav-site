@@ -1,4 +1,14 @@
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface, releaseItems, releaseSHA, indexPath, updatesNow } from '../fixtures/updates'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+test('145-C1.1 Updates entry clearance', async ({ page, runtime }) => {
+  await openRuntime(page, '/updates')
+  for (const width of [390, 768, 900, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await assertNavigationClearance(page, '.updates-header h1', `updates-${width}`)
+  }
+  runtime.assertQuiet()
+})
 
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date(updatesNow)) })
 

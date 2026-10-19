@@ -1,5 +1,140 @@
 import { test, expect, customSeed, searchPopupURL } from '../fixtures/nav-home-header'
 import { mkdir, writeFile } from 'node:fs/promises'
+import type { Locator, Page } from '@playwright/test'
+
+async function pointerSort(page: Page, modal: Locator, from: number, to: number) {
+  const grip = modal.locator('.quick-modal-grip').nth(from)
+  const start = (await grip.boundingBox())!, target = (await modal.locator('.quick-modal-item').nth(to).boundingBox())!
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(start.x + start.width / 2, target.y + target.height / 2 + Math.sign(to - from) * 6, { steps: 8 })
+  await expect(modal.locator('.quick-modal-item-dragging')).toHaveCount(1)
+  await expect.poll(async () => {
+    const shift = await modal.locator('.quick-modal-item').nth(to).evaluate(el => {
+      const transform = getComputedStyle(el).transform
+      return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42
+    })
+    return shift * Math.sign(to - from)
+  }).toBeLessThan(-1)
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test(`145-C1.1 handle sorting previews, commits once and cancels safely ${reducedMotion}`, async ({ page, header }) => {
+    await page.emulateMedia({ reducedMotion })
+    await header.open(900)
+    const manage = header.quick.getByRole('button', { name: '管理快捷站点', exact: true })
+    await manage.click()
+    const { modal } = header
+    await expect(modal).toHaveAttribute('role', 'dialog')
+    await expect(modal.locator('#custom-site-name')).toBeFocused()
+    await expect(modal.locator('[draggable]')).toHaveCount(0)
+    await expect(modal.locator('.quick-modal-close svg, .quick-modal-delete svg')).toHaveCount(3)
+    await page.evaluate(() => {
+      const save = Storage.prototype.setItem
+      document.documentElement.dataset.customWrites = '0'
+      Storage.prototype.setItem = function (key, value) {
+        if (key === 'navCustomSites') document.documentElement.dataset.customWrites = String(Number(document.documentElement.dataset.customWrites) + 1)
+        return save.call(this, key, value)
+      }
+      document.addEventListener('pointerdown', event => { document.documentElement.dataset.sortPointer = String(event.pointerId) })
+    })
+    const writes = page.locator('html')
+    const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!))
+    const recent = await page.evaluate(() => localStorage.getItem('recentSites'))
+    await pointerSort(page, modal, 0, 1)
+    expect(await saved()).toEqual(customSeed)
+    await expect(writes).toHaveAttribute('data-custom-writes', '0')
+    const moving = modal.locator('.quick-modal-item').nth(1)
+    await expect(moving).toHaveCSS('transition-duration', reducedMotion === 'reduce' ? '0s' : '0.2s')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(moving).toHaveCSS('transition-duration', '0s')
+    await page.mouse.up()
+    await expect(writes).toHaveAttribute('data-custom-writes', '1')
+    expect(await saved()).toEqual([...customSeed].reverse())
+    await expect(modal.locator('.quick-modal-item-name')).toHaveText(['Wiki', 'Artwork'])
+    const artwork = modal.locator('.quick-modal-grip').filter({ has: page.locator('svg') }).nth(1)
+    await artwork.focus(); await artwork.press('ArrowUp')
+    await expect(modal.locator('.quick-modal-grip').first()).toBeFocused()
+    await expect(modal.getByRole('status')).toContainText('第 1 项')
+    await expect(writes).toHaveAttribute('data-custom-writes', '2')
+    expect(await saved()).toEqual(customSeed)
+    for (const cancel of ['Escape', 'pointercancel', 'blur'] as const) {
+      await pointerSort(page, modal, 0, 1)
+      if (cancel === 'Escape') await page.keyboard.press('Escape')
+      else if (cancel === 'pointercancel') await modal.locator('.quick-modal-grip').first().dispatchEvent('pointercancel', { pointerId: Number(await writes.getAttribute('data-sort-pointer')), isPrimary: true })
+      else await page.evaluate(() => window.dispatchEvent(new Event('blur')))
+      await page.mouse.up()
+      await expect(modal.locator('.quick-modal-item-dragging')).toHaveCount(0)
+      await expect(modal.locator('.quick-modal-item').first()).toHaveCSS('transform', 'none')
+      expect(await saved()).toEqual(customSeed)
+      await expect(writes).toHaveAttribute('data-custom-writes', '2')
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await pointerSort(page, modal, 0, 1)
+    await expect(moving).toHaveCSS('transition-duration', '0.2s')
+    await page.keyboard.press('Escape'); await page.mouse.up()
+    await modal.locator('.quick-modal-delete').last().focus()
+    await page.keyboard.press('Tab'); await expect(modal.locator('.quick-modal-close')).toBeFocused()
+    await page.keyboard.press('Shift+Tab'); await expect(modal.locator('.quick-modal-delete').last()).toBeFocused()
+    await page.keyboard.press('Escape'); await expect(modal).toHaveCount(0); await expect(manage).toBeFocused()
+    await manage.click(); await expect(modal.locator('.quick-modal-item-name')).toHaveText(['Artwork', 'Wiki'])
+    await page.locator('.quick-modal-backdrop').click({ position: { x: 3, y: 400 } })
+    await expect(modal).toHaveCount(0); await expect(manage).toBeFocused()
+    expect(await page.evaluate(() => localStorage.getItem('recentSites'))).toBe(recent)
+    header.assertQuiet()
+  })
+}
+
+test('145-C1.1 seven shortcuts keep handle-only drag and bounded scrolling', async ({ page, header }) => {
+  await header.open()
+  await header.quick.getByRole('button', { name: '管理快捷站点', exact: true }).click()
+  const { modal } = header
+  for (let i = 1; i <= 5; i++) {
+    const url = `https://example.com/${i}`
+    header.allowExampleIcon(url)
+    await modal.locator('#custom-site-name').fill(`Example ${i}`)
+    await modal.locator('#custom-site-url').fill(url)
+    await modal.locator('button[type="submit"]').click()
+  }
+  await expect(modal.locator('.quick-modal-item')).toHaveCount(7)
+  await expect(modal.locator('button[type="submit"]')).toBeDisabled()
+  await page.setViewportSize({ width: 1440, height: 600 })
+  const row = modal.locator('.quick-modal-item').first(), text = row.locator('.quick-modal-item-name')
+  const box = (await text.boundingBox())!
+  await page.mouse.move(box.x + 10, box.y + 5); await page.mouse.down()
+  await page.mouse.move(box.x + 10, box.y + 75); await page.mouse.up()
+  await expect(modal.locator('.quick-modal-item-dragging')).toHaveCount(0)
+  await expect(modal.locator('.quick-modal-item-name').first()).toHaveText('Artwork')
+  await pointerSort(page, modal, 0, 2)
+  if (process.env.GOFURRY_145_C1_1_REVIEW) {
+    await mkdir('../../../.cache/145-c1-1-review/final', { recursive: true })
+    await modal.screenshot({ path: '../../../.cache/145-c1-1-review/final/quick-drag-1440.png' })
+  }
+  await page.mouse.up()
+  await expect(modal.locator('.quick-modal-item-name').nth(2)).toHaveText('Artwork')
+  const last = modal.locator('.quick-modal-grip').last()
+  await last.focus(); await last.press('ArrowUp')
+  await expect(modal.locator('.quick-modal-item-name').nth(5)).toHaveText('Example 5')
+  await expect(modal.locator('.quick-modal-grip').nth(5)).toBeFocused()
+  await modal.locator('.quick-modal-grip').first().focus()
+  await modal.locator('.quick-modal-list').evaluate(el => { el.scrollTop = 0 })
+  for (let index = 1; index < 7; index++) {
+    await page.keyboard.press('ArrowDown')
+    await expect(modal.locator('.quick-modal-grip').nth(index)).toBeFocused()
+    expect(await modal.locator('.quick-modal-grip').nth(index).evaluate(el => {
+      const row = el.closest('.quick-modal-item')!.getBoundingClientRect()
+      const list = el.closest('.quick-modal-list')!.getBoundingClientRect()
+      return row.top >= list.top - 1 && row.bottom <= list.bottom + 1
+    })).toBe(true)
+  }
+  if (process.env.GOFURRY_145_C1_1_REVIEW) {
+    await modal.screenshot({ path: '../../../.cache/145-c1-1-review/final/quick-keyboard-1440.png' })
+  }
+  const names = await modal.locator('.quick-modal-item-name').allTextContents()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!).map((item: { name: string }) => item.name))).toEqual(names)
+  await modal.locator('.quick-modal-close').click(); await expect(modal).toHaveCount(0)
+  header.assertQuiet()
+})
 
 for (const [width, height] of [[1440, 900], [1440, 600], [1440, 480], [900, 700], [390, 844]] as const) {
   test(`145-C1 Hero group and hint clearance ${width}x${height}`, async ({ page, header }) => {
@@ -54,7 +189,7 @@ test('B2 Quick Modal preserves the Normal 180/220ms contract', async ({ page, he
     return !!document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('.quick-modal-backdrop')
   })).toBe(true)
   expect(await page.evaluate(() => JSON.parse(document.documentElement.dataset.quickEntry!)))
-    .toEqual({ backdrop: '0.18s', panel: '0.22s, 0.18s', transform: 'matrix(0.985, 0, 0, 0.985, 0, 8)' })
+    .toEqual({ backdrop: '0.18s', panel: '0.22s, 0.18s', transform: 'matrix(1, 0, 0, 1, 0, 4)' })
   await header.modal.locator('.quick-modal-close').click()
   await expect(header.modal).toHaveCount(0)
   header.assertQuiet()
@@ -361,7 +496,8 @@ test('Quick Access exposes all slots and persists real Manage add/delete actions
   await expect(modal.locator('.quick-modal-item')).toHaveCount(2)
   await expect(modal.getByText('Example Site', { exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!))).toEqual(customSeed)
-  await modal.locator('.quick-modal-item').first().dragTo(modal.locator('.quick-modal-item').nth(1))
+  await pointerSort(page, modal, 0, 1)
+  await page.mouse.up()
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!))).toEqual([...customSeed].reverse())
   header.assertQuiet()
 })

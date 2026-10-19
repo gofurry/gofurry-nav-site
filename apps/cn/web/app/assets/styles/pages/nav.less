@@ -52,8 +52,10 @@
   --nav-home-quick-modal-primary-text: rgba(8, 15, 18, 0.94);
   --nav-home-quick-modal-grip: rgba(255, 248, 241, 0.42);
   --nav-home-quick-modal-item-muted: rgba(233, 241, 246, 0.62);
-  --nav-home-quick-modal-delete-bg: rgba(242, 78, 78, 0.95);
-  --nav-home-quick-modal-delete-text: rgba(255, 235, 235, 0.96);
+  --nav-home-quick-modal-delete-bg: rgba(148, 163, 184, 0.16);
+  --nav-home-quick-modal-delete-text: rgba(226, 232, 240, 0.9);
+  --nav-home-quick-modal-action-hover: rgba(148, 163, 184, 0.25);
+  --nav-home-quick-modal-drag-bg: rgba(39, 48, 58, 0.98);
 
   /* Search glass and state hierarchy stay theme-independent; compound shadows preserve the accepted cascade. */
   --nav-home-search-chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
@@ -398,15 +400,38 @@ html.dark .nav-home-page {
   line-height: 1.3;
 }
 
-.quick-modal-close {
+.quick-modal-close,
+.quick-modal-delete {
+  position: relative;
+  isolation: isolate;
   display: grid;
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   place-items: center;
-  border: 1px solid var(--nav-home-quick-modal-control-border);
-  border-radius: 999px;
-  background: var(--nav-home-quick-modal-control-bg);
-  color: var(--nav-home-quick-modal-control-text);
+  border: 0;
+  background: transparent;
+  color: var(--nav-home-quick-modal-delete-text);
+}
+.quick-modal-close::before,
+.quick-modal-delete::before {
+  position: absolute;
+  z-index: -1;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--nav-home-quick-modal-delete-bg);
+  content: '';
+  transition: background-color 160ms ease;
+}
+.quick-modal-close:hover::before,
+.quick-modal-delete:hover::before,
+.quick-modal-close:active::before,
+.quick-modal-delete:active::before {
+  background: var(--nav-home-quick-modal-action-hover);
+}
+.quick-modal-panel button:focus-visible {
+  outline: 2px solid var(--nav-home-quick-modal-focus-border);
+  outline-offset: 2px;
 }
 
 .quick-modal-form {
@@ -446,8 +471,7 @@ html.dark .nav-home-page {
   font-size: 0.76rem;
 }
 
-.quick-modal-primary,
-.quick-modal-delete {
+.quick-modal-primary {
   border-radius: 0.8rem;
   font-size: 0.82rem;
   transition:
@@ -481,33 +505,40 @@ html.dark .nav-home-page {
 }
 
 .quick-modal-item {
+  position: relative;
   display: flex;
   min-height: 3rem;
   align-items: center;
   gap: 0.65rem;
   border-radius: 0.85rem;
   background: var(--nav-home-quick-modal-surface-subtle);
-  cursor: grab;
   padding: 0.55rem 0.7rem;
 }
 
+.quick-modal-items--sorting { user-select: none; }
+.quick-modal-items--sorting .quick-modal-item { transition: transform 200ms ease; }
 .quick-modal-item-dragging {
-  opacity: 0.48;
+  z-index: 1;
+  background: var(--nav-home-quick-modal-drag-bg);
+}
+.quick-modal-items--sorting .quick-modal-item-dragging {
+  transition: none;
 }
 
 .quick-modal-grip {
   display: grid;
+  width: 36px;
+  height: 40px;
   flex-shrink: 0;
-  gap: 0.18rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--gf-radius-sm);
+  background: transparent;
+  color: var(--nav-home-quick-modal-grip);
+  cursor: grab;
+  touch-action: none;
 }
-
-.quick-modal-grip span {
-  width: 0.22rem;
-  height: 0.22rem;
-  border-radius: 999px;
-  background: var(--nav-home-quick-modal-grip);
-  box-shadow: 0 0.38rem 0 var(--nav-home-quick-modal-grip);
-}
+.quick-modal-item-dragging .quick-modal-grip { cursor: grabbing; }
 
 .quick-modal-item-name {
   color: var(--nav-home-quick-modal-text-strong);
@@ -520,18 +551,6 @@ html.dark .nav-home-page {
   color: var(--nav-home-quick-modal-item-muted);
   font-size: 0.72rem;
   word-break: break-all;
-}
-
-.quick-modal-delete {
-  display: grid;
-  width: 1.55rem;
-  height: 1.55rem;
-  flex-shrink: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: var(--nav-home-quick-modal-delete-bg);
-  color: var(--nav-home-quick-modal-delete-text);
 }
 
 .quick-modal-empty {
@@ -560,10 +579,15 @@ html.dark .nav-home-page {
 .quick-modal-enter-from .quick-modal-panel,
 .quick-modal-leave-to .quick-modal-panel {
   opacity: 0;
-  transform: translateY(8px) scale(0.985);
+  transform: translateY(4px);
 }
 
+.quick-modal-leave-active { pointer-events: none; }
+
 @media (prefers-reduced-motion: reduce) {
+  .quick-modal-items--sorting .quick-modal-item,
+  .quick-modal-close::before,
+  .quick-modal-delete::before,
   .quick-modal-enter-active,
   .quick-modal-leave-active,
   .quick-modal-enter-active .quick-modal-panel,

@@ -675,6 +675,9 @@
     "scrollStep": "Move up 25%"
   },
   "customSites": {
+    "reorderSite": "Reorder {name}",
+    "reorderHint": "Drag the handle or use the up and down arrow keys",
+    "reordered": "{name} moved to position {position} of {count}",
     "title": "Custom Sites",
     "description": "Keep your most visited websites here and preserve them after refresh.",
     "recentTitle": "Recent Visits",

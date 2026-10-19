@@ -675,6 +675,9 @@
     "scrollStep": "向上回退 25%"
   },
   "customSites": {
+    "reorderSite": "调整 {name} 的顺序",
+    "reorderHint": "拖动把手，或用上下方向键排序",
+    "reordered": "{name} 已移至第 {position} 项，共 {count} 项",
     "title": "常用网站",
     "description": "把你最常访问的网站固定在这里，刷新后也会保留。",
     "recentTitle": "最近浏览",

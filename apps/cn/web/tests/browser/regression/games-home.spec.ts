@@ -1,4 +1,5 @@
 import { test, expect, groupNames, assertGamesHomeAppearance, assertCardHover, assertStatsAppearance } from '../fixtures/games-home'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
 import { mkdir, writeFile } from 'node:fs/promises'
 
 test('C1 Home Normal motion keeps card directions and track geometry', async ({ gamesHome, page }) => {
@@ -295,3 +296,12 @@ for (const theme of ['light', 'dark'] as const) {
     scene.assertQuiet()
   })
 }
+
+test('145-C1.1 Games Home entry clearance', async ({ gamesHome }) => {
+  const scene = await gamesHome.open()
+  for (const width of [390, 768, 900, 1024, 1440]) {
+    await scene.page.setViewportSize({ width, height: 900 })
+    await assertNavigationClearance(scene.page, '.games-page .game-sidebar-search-input, .games-page h2', `games-home-${width}`)
+  }
+  scene.assertQuiet()
+})

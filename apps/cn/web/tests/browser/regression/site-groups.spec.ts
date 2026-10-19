@@ -1,4 +1,13 @@
 import { test, expect, css, assertSiteGroupAppearance } from '../fixtures/site-groups'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+
+for (const width of [390, 768, 900, 1024, 1440]) {
+  test(`145-C1.1 Site Group clearance ${width}`, async ({ siteGroups }) => {
+    const scene = await siteGroups.open({ width, lang: width === 900 ? 'zh' : 'en', theme: width === 1024 ? 'dark' : 'light' })
+    await assertNavigationClearance(scene.page, '.site-group-title, .site-group-header button', `site-group-${width}`)
+    scene.assertQuiet()
+  })
+}
 
 for (const theme of ['light', 'dark'] as const) {
   test(`Site Groups SSR, pagination and shared Nav consumer / ${theme}`, async ({ siteGroups }) => {

@@ -26,7 +26,7 @@ type Header = {
   expectAborted(query: string): Promise<void>
   expectSuggestionRequest(query: string): Promise<void>
   showSuggestions(): Promise<void>
-  allowExampleIcon(): void
+  allowExampleIcon(url?: string): void
   allowSearchPopup(url?: string): void
   assertQuiet(): void
   settle(target: Locator): Promise<void>
@@ -52,7 +52,6 @@ export const customSeed = [
 const favicon = (url: string) => `https://favicon.im/${url}?larger=true`
 const failedIcon = favicon(recentSeed[1]!.url)
 const seededIcons = [...recentSeed, ...customSeed].map(site => favicon(site.url))
-const exampleIcon = favicon('https://example.com')
 const iconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" rx="7" fill="#719489"/><path d="M8 24V8l8 8 8-8v16" fill="none" stroke="#fff5e9" stroke-width="3"/></svg>'
 // Stable image bytes at exact managed URLs; the real picture/img, snapshot and
 // rendering pipeline remain production-owned. No component or DOM substitution.
@@ -100,7 +99,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     const popupErrors: string[][] = []
     const external: string[] = [], unexpectedFailed: string[] = [], injectedFailed: string[] = []
     const managed: string[] = [], icons: string[] = [], weather: string[] = [], popups: string[] = [], browserAPI: string[] = []
-    let exampleAllowed = false
+    const exampleIcons = new Set<string>()
     const allowedPopups: string[] = [], expectedAborts = new Set<string>(), aborted: string[] = []
     const suggestionURL = (query: string) => app.base + '/api/v2/nav/search/suggestions?' + new URLSearchParams({ q: query })
     context.on('page', popup => { if (popup !== page) popupErrors.push(captureBrowserErrors(popup)) })
@@ -123,7 +122,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
         managed.push(url)
         return route.fulfill({ contentType: 'image/svg+xml', body: heroSVG })
       }
-      if (seededIcons.includes(url) || (exampleAllowed && url === exampleIcon)) {
+      if (seededIcons.includes(url) || exampleIcons.has(url)) {
         icons.push(url)
         if (url === failedIcon) {
           expectedFailures.add(url)
@@ -222,7 +221,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
           state.gates.set(query, { promise, release })
           expectedAborts.add(suggestionURL(query))
         },
-        allowExampleIcon() { exampleAllowed = true },
+        allowExampleIcon(url = 'https://example.com') { exampleIcons.add(favicon(url)) },
         allowSearchPopup(url = searchPopupURL) { allowedPopups.push(url) },
         async open(width = 1440) {
           await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })

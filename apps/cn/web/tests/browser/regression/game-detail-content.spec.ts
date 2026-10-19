@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/game-detail-contract'
+import { assertNavigationClearance } from '../fixtures/navigation-clearance'
 import { mkdir } from 'node:fs/promises'
 
 test('populated detail is rendered by SSR with one hydration view side effect', async ({ detail }) => {
@@ -222,5 +223,14 @@ test('recommendation failure preserves the main detail and can retry locally', a
   await detail.page.locator('[data-detail-recommend-error] button').click()
   await expect(detail.page.locator('.game-detail-similar-viewport .game-detail-similar-item:not([aria-hidden])')).toHaveCount(4)
   expect(detail.reads.slice(before).map(call => call.path)).toEqual(['/recommend/similar'])
+  detail.assertQuiet()
+})
+
+test('145-C1.1 Game Detail entry clearance', async ({ detail }) => {
+  await detail.open()
+  for (const width of [390, 768, 900, 1024, 1440]) {
+    await detail.page.setViewportSize({ width, height: 900 })
+    await assertNavigationClearance(detail.page, '.game-detail-hero h1, .game-detail-sidebar-links > div:first-child button', `game-detail-${width}`)
+  }
   detail.assertQuiet()
 })

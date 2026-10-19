@@ -1,6 +1,35 @@
 import { test, expect, quote, weatherURL } from '../fixtures/nav-revealed-content'
 import { mkdir } from 'node:fs/promises'
 
+for (const [width, theme] of [[900, 'dark'], [1440, 'light']] as const) {
+  test(`145-C1.1 utility search focus and neutral thin scrollbar ${width}`, async ({ revealed }) => {
+    const scene = await revealed.open({ width, theme, largeDirectory: true })
+    const { page, searchInput, searchPanel } = scene
+    await scene.openSearch()
+    await searchInput.fill('wolf')
+    await expect(scene.results).toHaveCount(8)
+    await expect(searchInput).toHaveCSS('outline-style', 'none')
+    await expect(searchInput).not.toHaveCSS('box-shadow', 'none')
+    const results = searchPanel.locator('.gf-nav__search-results')
+    const scrollbar = await results.evaluate(el => ({ thickness: (el as HTMLElement).offsetWidth - el.clientWidth,
+      width: getComputedStyle(el, '::-webkit-scrollbar').width, thumb: getComputedStyle(el, '::-webkit-scrollbar-thumb').backgroundColor,
+      track: getComputedStyle(el, '::-webkit-scrollbar-track').backgroundColor, overflowing: el.scrollHeight > el.clientHeight }))
+    expect(scrollbar).toMatchObject({ width: '5px', track: 'rgba(0, 0, 0, 0)', overflowing: true })
+    expect(scrollbar.thickness).toBeLessThanOrEqual(5)
+    expect(scrollbar.thumb).toContain('0.38')
+    await scene.results.last().focus()
+    await expect.poll(() => results.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
+    if (process.env.GOFURRY_145_C1_1_REVIEW) {
+      await mkdir('../../../.cache/145-c1-1-review/final', { recursive: true })
+      await searchInput.focus()
+      await page.screenshot({ path: `../../../.cache/145-c1-1-review/final/search-${width}-${theme}.png` })
+    }
+    await page.keyboard.press('Escape'); await expect(searchPanel).toHaveCount(0)
+    await expect(scene.dock.getByRole('button', { name: '搜索站点', exact: true })).toBeFocused()
+    scene.assertQuiet()
+  })
+}
+
 test('145-C1 utility search keeps focus, cache and instant Reduced exit on the shared shell', async ({ revealed }) => {
   const scene = await revealed.open({ width: 900 })
   const { page, searchPanel, searchInput } = scene
