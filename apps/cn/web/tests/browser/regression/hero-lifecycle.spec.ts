@@ -20,9 +20,9 @@ for (const width of [1440, 390]) {
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('gf_asset_cdn_diagnostics')!).selected)).toBe('mirror')
     expect(await hero.currentHero()).toBe(initial)
     await page.evaluate(() => { window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('resize')) })
-    // The real prewarm timer mounts content; no fake timer or refetch hook.
+    // SSR content remains present without refetch on focus/resize.
     await expect(page.locator('.nav-content-shell')).toHaveCount(1)
-    await page.waitForTimeout(900)
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
     expect(hero.homeCalls).toHaveLength(1)
     expect(hero.heroCalls).toHaveLength(0)
     expect(await hero.currentHero()).toBe(initial)

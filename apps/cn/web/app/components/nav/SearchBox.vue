@@ -137,7 +137,6 @@ import { PhCaretDown, PhCaretUp } from '@phosphor-icons/vue'
 import { getSearchSuggestion } from '@/services/nav'
 import { useI18n } from 'vue-i18n'
 import { useReducedMotion } from '@/composables/useReducedMotion'
-import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -528,14 +527,6 @@ function abortSuggestionRequest() {
   suggestionAbortController = null
 }
 
-watch(
-    [dropdownVisible, isInputFocused, pickerExpanded],
-    ([visible, focused, expanded]) => {
-      setNavPageRevealLock('search-box', visible || focused || expanded)
-    },
-    { immediate: true, flush: 'sync' }
-)
-
 onMounted(() => {
   mobileQuery = window.matchMedia('(max-width: 767px)')
   mobileQuery.addEventListener('change', handleBreakpoint)
@@ -549,6 +540,5 @@ onBeforeUnmount(() => {
   mobileQuery?.removeEventListener('change', handleBreakpoint)
   cancelSuggestions()
   document.removeEventListener('click', handleClickOutside)
-  setNavPageRevealLock('search-box', false)
 })
 </script>

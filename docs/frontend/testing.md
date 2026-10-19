@@ -21,6 +21,15 @@ not authorization to update an accepted golden.
 
 ## Floating navigation shell (#145-A)
 
+#145-B supersedes the historical Reveal/prewarm and Footer mismatch allowances
+in the phase-labelled sections below. `nav-revealed-content` now verifies real
+SSR nodes, natural wheel/touch/keyboard scrolling and geometry-driven ToolDock;
+its historical `reveal()` helper only positions the test viewport. Header/Shell
+and localized smoke retain strict request ledgers, zero hydration errors and
+SSR Hero retention, including 390/640/767/768/1440px. The
+[B record](../acceptance/145-b-hero-scroll-content-readiness.md) owns actual results;
+older phase records and accepted Visual goldens remain unchanged.
+
 `nav-shell` owns independent island geometry/hit testing, icon accessibility,
 768/1024 breakpoints, target-language switching with query/hash, menu teardown,
 Home Hero/absolute-header handoff with top-reset hysteresis, and browser history.

@@ -18,6 +18,7 @@ type NavShell = {
   language(locale: 'CN' | 'EN', mobile?: boolean): Locator
   assertLanguage(locale: 'CN' | 'EN', mobile?: boolean): Promise<void>
   assertBottomTabs(visible: boolean): Promise<void>
+  expectWeather(): Promise<void>
   openBottomMode(): Promise<void>
   scrollTo(top: number): Promise<void>
   settle(target: Locator): Promise<void>
@@ -50,8 +51,9 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     const errors = captureBrowserErrors(page)
     const external: string[] = [], failed: string[] = []
     const browserAPI: string[] = []
-    const isolatedWeather: string[] = [], knownHydration: string[] = []
+    const isolatedWeather: string[] = []
     let home = false
+    let weatherExpected = false
     let locale = 'zh'
     let modeCatalogExpected = false
     const upstreamStart = shellApp.requests.length
@@ -90,12 +92,10 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
         if (url.pathname === '/api/v2/nav/appearance/patterns') expect(url.search).toBe('')
         else expect(url.searchParams.get('lang')).toBe(locale)
       }
-      expect(isolatedWeather, 'Only the exact Home weather frame is isolated').toEqual(home ? [weatherURL] : [])
+      expect(isolatedWeather, 'Only the explicitly reached lazy Home weather frame is isolated').toEqual(weatherExpected ? [weatherURL] : [])
       expect(external, 'No external origins may be requested').toEqual([])
       expect(failed, 'No resource failures are expected').toEqual([])
-      // Preserve raw evidence and consume only the one already-verified initial
-      // mobile Footer mismatch. A later identical message still fails.
-      expect(errors.slice(knownHydration.length), 'No errors beyond the verified initial Footer debt are allowed').toEqual([])
+      expect(errors, 'No hydration or unexpected runtime errors are allowed').toEqual([])
     }
     const assertTheme = async (theme: Theme) => {
       await expect.poll(() => page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
@@ -118,8 +118,13 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     try {
       await use({
         nav, menu, toggle, bottomTabs, language, assertTheme, assertQuiet, settle,
+        async expectWeather() {
+          weatherExpected = true
+          await expect.poll(() => isolatedWeather.length).toBe(1)
+        },
         async open({ width = 1440, theme = 'light', route = '/terms' } = {}) {
           home = route === '/' || route === '/en'
+          weatherExpected = home && width >= 640
           locale = route === '/en' ? 'en' : 'zh'
           await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
           await context.addInitScript(({ origin, theme, steamKey, sample, home }) => {
@@ -137,7 +142,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
               china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' },
             }))
             if (home) {
-              // Evidence required by the existing narrow Footer-debt guard.
+              // Retain evidence of the actual SSR Hero at every breakpoint.
               // Observe the SSR node; never alter Vue state or the rendered DOM.
               const observer = new MutationObserver(() => {
                 const node = document.querySelector('.nav-header__background:not([data-hero-pending])')
@@ -160,14 +165,15 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
           await expect(nav).toBeVisible()
           if (home) {
             await expect(nav).toHaveClass(/\bgf-nav--overlay\b/)
-            // Real Mobile reveal / Desktop prewarm mounts content. Neither is
-            // faked, and the Nav contract does not wait on its unrelated motion.
+            // Content and Footer are already present in the actual SSR HTML.
             await expect(page.locator('.nav-content-shell')).toHaveCount(1)
             await expect.poll(() => shellApp.requests.slice(upstreamStart).length).toBe(2)
-            await expect.poll(() => isolatedWeather.length).toBe(1)
-            const initialErrors = [...errors]
-            await assertHeroHydration(page, ssr, [...initialErrors], route === '/en' ? '/en' : '/')
-            knownHydration.push(...initialErrors)
+            if (width >= 640) await expect.poll(() => isolatedWeather.length).toBe(1)
+            await assertHeroHydration(page, ssr, errors, route === '/en' ? '/en' : '/')
+            expect(await page.evaluate(html => {
+              const dom = new DOMParser().parseFromString(html, 'text/html')
+              return { content: dom.querySelectorAll('.nav-content').length, footer: dom.querySelectorAll('.gf-footer-shell').length, main: dom.querySelectorAll('main').length }
+            }, ssr)).toEqual({ content: 1, footer: 1, main: 1 })
           } else await expect(nav).not.toHaveClass(/\bgf-nav--overlay\b/)
           await expect(page.locator('[data-public-background]')).toHaveAttribute('data-pattern-status', 'default')
           assertQuiet()
@@ -251,7 +257,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
       assertQuiet()
     } finally {
       await testInfo.attach('nav-shell-requests.json', {
-        body: JSON.stringify({ upstream: shellApp.requests.slice(upstreamStart).map(url => url.href), browserAPI, modeCatalogExpected, isolatedWeather, external, failed, errors, knownHydration }),
+        body: JSON.stringify({ upstream: shellApp.requests.slice(upstreamStart).map(url => url.href), browserAPI, modeCatalogExpected, isolatedWeather, external, failed, errors }),
         contentType: 'application/json',
       })
       if (testInfo.status !== testInfo.expectedStatus) {

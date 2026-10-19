@@ -97,7 +97,6 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     const upstreamStart = app.requests.length
     const expectedFailures = new Set<string>()
     const errors = captureBrowserErrors(page, expectedFailures)
-    const knownHydration: string[] = []
     const popupErrors: string[][] = []
     const external: string[] = [], unexpectedFailed: string[] = [], injectedFailed: string[] = []
     const managed: string[] = [], icons: string[] = [], weather: string[] = [], popups: string[] = [], browserAPI: string[] = []
@@ -165,12 +164,11 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       }
       for (const path of browserAPI) expect([...new URL(path, app.base).searchParams.keys()]).toEqual(['q'])
       expect(managed).toEqual([heroURLs[page.viewportSize()!.width < 768 ? 1 : 0]])
-      expect(weather).toEqual([weatherURL])
+      expect(weather).toEqual(page.viewportSize()!.width >= 640 ? [weatherURL] : [])
       expect(external).toEqual([])
       expect(unexpectedFailed).toEqual([])
-      // Raw evidence stays intact. Consume only the initial Mobile error already
-      // verified by the existing helper; any later error (even identical) fails.
-      expect(errors.slice(knownHydration.length)).toEqual([])
+      // Keep raw evidence; initial hydration and every later error must be clean.
+      expect(errors).toEqual([])
       expect(popupErrors.flat()).toEqual([])
       expect(popups).toEqual(allowedPopups)
     }
@@ -243,7 +241,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
               primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
             localStorage.setItem(steamKey, JSON.stringify({ version: 1, selected: 'china', checkedAt, sample,
               china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' } }))
-            if (innerWidth < 768) {
+            {
               // Observe the earliest real SSR Hero for assertHeroHydration;
               // never modify DOM, Vue state or the displayed resource.
               const observer = new MutationObserver(() => {
@@ -267,10 +265,9 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
           await expect(input).toBeVisible()
           await expect.poll(() => root.locator('.nav-header__background--managed img').evaluate((image: HTMLImageElement) =>
             image.complete && image.naturalWidth > 0 && image.currentSrc)).toBe(heroURLs[width < 768 ? 1 : 0])
-          // Real Mobile reveal / Desktop prewarm may mount the weather consumer;
-          // wait semantically, without owning unrelated Home animation timing.
+          // The content consumer is SSR; only its visible lazy weather frame loads.
           await expect(page.locator('.nav-content-shell')).toHaveCount(1)
-          await expect.poll(() => weather.length).toBe(1)
+          if (width >= 640) await expect.poll(() => weather.length).toBe(1)
           if (width >= 768) {
             await expect(quick).toBeVisible()
             await expect(quick.locator('[title="Archive"] .quick-site-fallback')).toHaveText('A')
@@ -280,11 +277,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
               && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true)
           } else await expect(quick).toBeHidden()
           await settle(search)
-          if (width < 768) {
-            const initialErrors = [...errors]
-            await assertHeroHydration(page, ssr, [...initialErrors])
-            knownHydration.push(...initialErrors)
-          } else expect(errors).toEqual([])
+          await assertHeroHydration(page, ssr, errors)
           expect(state.requests).toHaveLength(1)
           expect(browserAPI).toEqual([])
           assertQuiet()
@@ -325,10 +318,11 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       })
       assertQuiet()
     } finally {
+      if (testInfo.status !== testInfo.expectedStatus) await testInfo.attach('header-server.log', { body: app.logs(), contentType: 'text/plain' })
       state.gates.forEach(gate => gate.release())
       await testInfo.attach('header-network-evidence', { contentType: 'application/json', body: JSON.stringify({
         upstream: state.requests.map(String), browserAPI, managed, icons, injectedFailed, weather, popups,
-        external, unexpectedFailed, aborted, errors, knownHydration, popupErrors,
+        external, unexpectedFailed, aborted, errors, popupErrors,
       }, null, 2) })
       headerApp.current = null
       // Playwright owns the context and routes. Never await unrouteAll(wait)

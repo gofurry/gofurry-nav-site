@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/nav-shell'
 
-for (const route of ['/', '/en'] as const) for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
-  test(`Localized Home shell and real reveal ${route} ${width} ${theme}`, async ({ page, navShell }) => {
+for (const route of ['/', '/en'] as const) for (const width of [1440, 768, 767, 640, 390]) for (const theme of ['light', 'dark'] as const) {
+  test(`Localized Home SSR shell and natural content ${route} ${width} ${theme}`, async ({ page, navShell }) => {
     await navShell.open({ route, width, theme })
     await expect(page.locator('.nav-home-page')).toBeVisible()
     await expect(page.locator('.nav-header')).toBeVisible()

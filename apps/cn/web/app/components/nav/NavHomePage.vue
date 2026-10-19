@@ -4,18 +4,14 @@
       :desktop-object-key="navPageData.desktopObjectKey"
       :mobile-object-key="navPageData.mobileObjectKey"
     />
-    <NavToolDock v-if="isContentRevealed" />
-    <main
-        v-if="isContentMounted"
+    <NavToolDock v-if="dockActive" />
+    <div
         ref="contentRef"
         class="nav-content-shell relative z-10 flex-1 overflow-hidden"
     >
-      <div class="absolute z-30 w-full">
-        <NavTransitionBar :initial-saying="navPageData.saying" />
-      </div>
+      <NavTransitionBar :initial-saying="navPageData.saying" />
       <div class="relative z-10">
         <div class="mx-auto w-full max-w-[2080px] px-4 sm:px-6 xl:px-8">
-          <div class="h-10"></div>
           <NavContent
             :initial-groups="navPageData.groups"
             :initial-spotlight="navPageData.spotlight"
@@ -24,12 +20,12 @@
           <div class="h-10"></div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getNavHome } from '~/services/nav'
 import type { Delay, Group, NavHomeSpotlight, SayingModel } from '~/types/nav'
@@ -37,8 +33,6 @@ import NavHeader from '@/components/nav/NavHeader.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
-import { debounce, throttle } from '@/utils/util'
-import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
 import { heroPreferenceKey } from '~/utils/heroPreferences'
 
 interface NavPageData {
@@ -50,16 +44,9 @@ interface NavPageData {
   pingData: Record<string, Delay>
 }
 
-const isContentMounted = ref(false)
-const isContentRevealed = ref(false)
+const dockActive = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
-
-let touchStartY = 0
-let mobileMediaQuery: MediaQueryList | null = null
-let prewarmTimer: ReturnType<typeof setTimeout> | null = null
-let idlePrewarmId: number | null = null
-let revealInProgress = false
 
 function parsePingData(data: Record<string, string | undefined>) {
   const result: Record<string, Delay> = {}
@@ -114,187 +101,31 @@ const { data } = await useAsyncData<NavPageData>(
 
 const navPageData = computed(() => data.value!)
 
-function mountContent() {
-  if (isContentMounted.value) {
-    return
-  }
+// Observe natural scrolling only; mounting, Footer and Search need no reveal state.
+let scrollFrame: number | null = null
+let desktopQuery: MediaQueryList | null = null
 
-  isContentMounted.value = true
+function syncDock() {
+  scrollFrame = null
+  dockActive.value = Boolean(desktopQuery?.matches && contentRef.value
+    && contentRef.value.getBoundingClientRect().top <= window.innerHeight / 2)
 }
 
-function cancelScheduledPrewarm() {
-  if (prewarmTimer) {
-    clearTimeout(prewarmTimer)
-    prewarmTimer = null
-  }
-
-  if (idlePrewarmId !== null && window.cancelIdleCallback) {
-    window.cancelIdleCallback(idlePrewarmId)
-    idlePrewarmId = null
-  }
-}
-
-function scheduleContentPrewarm() {
-  if (isContentMounted.value || !import.meta.client) {
-    return
-  }
-
-  cancelScheduledPrewarm()
-
-  const prewarm = () => {
-    prewarmTimer = null
-    idlePrewarmId = null
-    mountContent()
-  }
-
-  prewarmTimer = setTimeout(() => {
-    prewarmTimer = null
-    if (isContentMounted.value) {
-      return
-    }
-
-    if (window.requestIdleCallback) {
-      idlePrewarmId = window.requestIdleCallback(prewarm, { timeout: 1400 })
-      return
-    }
-
-    prewarm()
-  }, 700)
-}
-
-function waitForFrames(count = 2) {
-  return new Promise<void>((resolve) => {
-    const step = () => {
-      count -= 1
-      if (count <= 0) {
-        resolve()
-        return
-      }
-      requestAnimationFrame(step)
-    }
-
-    requestAnimationFrame(step)
-  })
-}
-
-async function revealContent(shouldScroll = true, force = false) {
-  if (!force && isNavPageRevealLocked()) {
-    return
-  }
-
-  if (isContentRevealed.value || revealInProgress) {
-    return
-  }
-
-  revealInProgress = true
-  try {
-    cancelScheduledPrewarm()
-    mountContent()
-    await nextTick()
-    await waitForFrames()
-
-    isContentRevealed.value = true
-    // The first reveal is the only time this page needs to own a wheel event.
-    window.removeEventListener('wheel', handleWheel)
-    dispatchNavPageReveal(true)
-
-    if (!shouldScroll) {
-      return
-    }
-
-    contentRef.value?.scrollIntoView({
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-      block: 'start',
-    })
-  } finally {
-    revealInProgress = false
-  }
-}
-
-function syncRevealByViewport() {
-  if (window.innerWidth < 768) {
-    void revealContent(false, true)
-  }
-}
-
-function handleViewportChange(event: MediaQueryListEvent) {
-  if (event.matches) {
-    void revealContent(false, true)
-  }
-}
-
-const handleRevealScroll = throttle(() => {
-  if (window.scrollY > 24) {
-    void revealContent()
-  }
-}, 120)
-
-const handleRevealScrollEnd = debounce(() => {
-  if (window.scrollY > 24) {
-    void revealContent()
-  }
-}, 180)
-
-function handleScroll() {
-  handleRevealScroll()
-  handleRevealScrollEnd()
-}
-
-function handleResize() {}
-
-function handleWheel(event: WheelEvent) {
-  if (event.deltaY > 8) {
-    // An instant reveal must not be followed by this same event's native delta.
-    // Normal scrolling and search/dialog locks retain their existing behavior.
-    if (!isContentRevealed.value && !isNavPageRevealLocked()
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      event.preventDefault()
-    }
-    void revealContent()
-  }
-}
-
-function handleTouchStart(event: TouchEvent) {
-  touchStartY = event.touches[0]?.clientY ?? 0
-}
-
-function handleTouchMove(event: TouchEvent) {
-  const currentY = event.touches[0]?.clientY ?? touchStartY
-  if (touchStartY - currentY > 12) {
-    void revealContent()
-  }
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  if (['ArrowDown', 'PageDown', 'Space', 'End'].includes(event.code)) {
-    void revealContent()
-  }
+function scheduleDockSync() {
+  if (scrollFrame === null) scrollFrame = requestAnimationFrame(syncDock)
 }
 
 onMounted(() => {
-  dispatchNavPageReveal(false)
-  syncRevealByViewport()
-  scheduleContentPrewarm()
-
-  mobileMediaQuery = window.matchMedia('(max-width: 767px)')
-  mobileMediaQuery.addEventListener('change', handleViewportChange)
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  window.addEventListener('resize', handleResize)
-  window.addEventListener('wheel', handleWheel, { passive: false })
-  window.addEventListener('touchstart', handleTouchStart, { passive: true })
-  window.addEventListener('touchmove', handleTouchMove, { passive: true })
-  window.addEventListener('keydown', handleKeydown)
+  // Match the existing NavToolDock CSS breakpoint.
+  desktopQuery = window.matchMedia('(min-width: 1024px)')
+  window.addEventListener('scroll', scheduleDockSync, { passive: true })
+  window.addEventListener('resize', scheduleDockSync)
+  syncDock()
 })
 
 onUnmounted(() => {
-  dispatchNavPageReveal(true)
-  cancelScheduledPrewarm()
-  mobileMediaQuery?.removeEventListener('change', handleViewportChange)
-  window.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('resize', handleResize)
-  window.removeEventListener('wheel', handleWheel)
-  window.removeEventListener('touchstart', handleTouchStart)
-  window.removeEventListener('touchmove', handleTouchMove)
-  window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('scroll', scheduleDockSync)
+  window.removeEventListener('resize', scheduleDockSync)
+  if (scrollFrame !== null) cancelAnimationFrame(scrollFrame)
 })
 </script>

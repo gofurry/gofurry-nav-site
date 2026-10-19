@@ -172,8 +172,8 @@ interface for both inner ends: the brand fills its left side, the actions its ex
 complement. It scales with island height without a browser-specific clip fallback;
 native controls and their focus rings stay outside the decorative geometry.
 Active icons use color, not inner cards.
-Site tabs and Context respect the fixed desktop header; the Home Reveal target
-only gains a local scroll margin. Hero loading/SSR/reveal decisions remain separate (#145-B).
+Site tabs and Context respect the fixed desktop header. #145-B replaces Home
+Reveal with native scrolling and SSR content; its obsolete target margin is removed.
 Menu exit is inert immediately, and Reduced Motion retains #139's local rules.
 The prior P5 appearance statements above describe that migration's baseline;
 new pixels require #145-C review, not an automatic Golden update.
@@ -186,7 +186,7 @@ another provider swaps slots and leaves the grid open. Stable provider IDs own o
 Only the main button remains when collapsed; there is no dialog, backdrop, focus
 trap or body lock. Escape returns focus to that button; outside click, input focus,
 category/locale/route/breakpoint changes and unmount close the grid. Opening cancels
-suggestions and shares the existing Search Reveal lock. Local Vue Transition + Less
+suggestions; #145-B removes the obsolete Search Reveal lock. Local Vue Transition + Less
 owns 180ms opacity/4px entry, instant exit and live Reduced Motion. Desktop Search
 retains its existing provider list. No global Picker abstraction is introduced.
 

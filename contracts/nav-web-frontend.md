@@ -24,6 +24,13 @@ authorize reopening completed work or running retired commands. Current commands
 and coverage live in [testing](../docs/frontend/testing.md); remote/manual sign-off
 status lives in the [closure record](../docs/acceptance/issue-124-frontend-engineering-closure.md).
 
+#145-B supersedes the historical Home Reveal/prewarm/lock and Footer-debt
+exceptions below: Home content and Footer MUST be actual SSR DOM. Both locales
+MUST hydrate without mismatches and retain the initial Hero node. Scrolling is
+native in Normal/Reduced modes; only desktop ToolDock activation observes content
+geometry. Its directory remains requested on search-open. See the
+[B acceptance record](../docs/acceptance/145-b-hero-scroll-content-readiness.md).
+
 For frontend decisions, resolve evidence in this order:
 
 1. Executable code and tests for actual behavior and compatibility.

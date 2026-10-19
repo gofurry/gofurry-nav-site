@@ -50,22 +50,13 @@ interface HeroLifecycle extends LifecycleState {
   paintSample(): Promise<Buffer>
 }
 
-// Hero-only debt assertion, deliberately outside the generic error collector.
-// Consume only the already-verified navigation evidence; later errors still fail.
+// Initial SSR and hydration must agree at every Home breakpoint; no Footer waiver.
 export async function assertHeroHydration(page: Page, ssrHTML: string, errors: string[], homePath: '/' | '/en' = '/') {
-  const mismatches = errors.filter(error => /hydration.*mismatch|mismatch.*hydration/i.test(error))
-  if (mismatches.length) {
-    expect(page.viewportSize()!.width).toBeLessThan(768)
-    // English Home opts in explicitly; existing callers retain the '/' boundary.
-    // See the Footer runtime follow-up in the #124 closure record.
-    expect(new URL(page.url()).pathname).toBe(homePath)
-    expect(mismatches).toHaveLength(1)
-    expect(ssrHTML).not.toMatch(/class="[^"]*\bgf-footer-shell\b/)
-    await expect(page.locator('.gf-footer-shell')).toHaveCount(1)
-    await expectSSRHeroRetained(page)
-    expect(errors.filter(error => !mismatches.includes(error))).toEqual([])
-  } else expect(errors).toEqual([])
-  errors.length = 0
+  expect(new URL(page.url()).pathname).toBe(homePath)
+  expect(ssrHTML).toMatch(/class="[^"]*\bgf-footer-shell\b/)
+  await expect(page.locator('.gf-footer-shell')).toHaveCount(1)
+  await expectSSRHeroRetained(page)
+  expect(errors).toEqual([])
 }
 
 export async function expectSSRHeroRetained(page: Page) {

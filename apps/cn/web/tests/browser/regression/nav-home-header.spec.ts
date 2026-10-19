@@ -172,10 +172,10 @@ test('Suggestions own one 220ms entry, instant exit and live Reduced loading wit
   header.assertQuiet()
 })
 
-test('Reduced mobile Home retains automatic reveal and a static loading suggestion', async ({ page, header }) => {
+test('Reduced mobile Home has SSR content and a static loading suggestion', async ({ page, header }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await header.open(390)
-  await expect(page.locator('.nav-tool-dock')).toHaveCount(1)
+  await expect(page.locator('.nav-tool-dock')).toHaveCount(0)
   await expect(page.locator('.nav-content-shell')).toBeVisible()
   header.holdSuggestions()
   await header.input.fill('wolf'); await header.expectSuggestionRequest('wolf')
@@ -188,7 +188,7 @@ test('Reduced mobile Home retains automatic reveal and a static loading suggesti
   header.assertQuiet()
 })
 
-test('Search keeps typography, theme parity, debounce, keyboard selection and reveal lock', async ({ page, header }) => {
+test('Search keeps typography, theme parity, debounce, keyboard selection and native scrolling', async ({ page, header }) => {
   await header.open()
   const { input, search, suggestions, items, quick } = header
   const category = search.locator('.search-category-row .search-chip-active')
@@ -254,7 +254,7 @@ test('Search keeps typography, theme parity, debounce, keyboard selection and re
   await expect(items).toHaveCount(0)
 
   // Wheel outside the dropdown (which stops propagation) must reach the real
-  // window listener while Search owns its reveal lock. Only observe the event.
+  // native wheel event while Search is focused. Only observe the event.
   await page.evaluate(() => {
     document.documentElement.dataset.headerWheelObserved = 'false'
     window.addEventListener('wheel', event => {
@@ -272,14 +272,7 @@ test('Search keeps typography, theme parity, debounce, keyboard selection and re
   await page.mouse.click(20, 400)
   await expect(input).not.toBeFocused()
   await page.mouse.wheel(0, 300)
-  await expect(page.locator('.nav-tool-dock')).toHaveCount(1)
-  // Let the real reveal's scrollIntoView finish before returning to Search;
-  // otherwise its pending smooth scroll can race a one-shot scrollTo(0).
-  await expect.poll(() => page.locator('.nav-content-shell').evaluate(element => {
-    const target = Math.min(element.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(element).scrollMarginTop || '0'),
-      document.documentElement.scrollHeight - innerHeight)
-    return Math.abs(scrollY - target)
-  })).toBeLessThanOrEqual(1)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(480)
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
   await header.showSuggestions()

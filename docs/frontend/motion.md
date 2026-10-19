@@ -42,7 +42,7 @@ to `no-preference` without reload. CSS alone cannot settle a JS state machine.
 | Manual paging | One correct selected target, no residual tracks or artificial timer wait; controls remain usable |
 | Autoplay | Pause automatic advancement; manual navigation remains available |
 | Loading / skeleton / spinner | Visible, identifiable static waiting state until the real work finishes |
-| Nav reveal | Instant positioning with the existing reveal lock, sequence, focus and Footer behavior |
+| Nav Home scrolling | Native user-controlled scrolling in both modes; content and Footer are SSR-rendered, with no Reveal lock or automatic positioning (#145-B) |
 | Decorative loops | Stop motion without removing necessary information |
 | Charts | Preserve real data, missing/unknown and loading semantics; no invented transition data |
 
@@ -50,8 +50,8 @@ Cancel visual timers/RAFs and invalidate deferred completion work when settling
 or unmounting. Use the latest selected target. Search must distinguish visual
 completion from pending network data: retain static loading while pending, then
 show only the result accepted by its existing request owner. Returning to Normal
-affects the next interaction and must not revive old work. Nav reveal reads the
-current preference when it scrolls; it does not restart a completed scroll.
+affects the next interaction and must not revive old work. Changing the preference
+must not initiate or reposition Home scrolling.
 
 Use narrowly scoped Reduced rules in the existing stylesheet. Do not use a
 global `*` animation reset, hide a spinner without waiting feedback, or set zero

@@ -1,6 +1,7 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import { captureBrowserErrors } from './browser-errors'
+import { assertHeroHydration } from './hero-lifecycle'
 import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 import type { Group, NavHomeResponse, Site } from '../../../app/types/nav'
 
@@ -54,6 +55,7 @@ export const siteURL = (value: Site) => `https://${JSON.parse(value.domain).doma
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type RequestEvidence = { method: string, path: string }
 type State = {
+  lang: 'zh' | 'en'
   data: ReturnType<typeof scenarioData>
   upstream: URL[]
   upstreamEnd?: number
@@ -69,7 +71,7 @@ type State = {
   pages: Array<{ page: Page, errors: string[] }>
 }
 type Worker = { app: App, current: State | null }
-type OpenOptions = { width?: number, theme?: 'light' | 'dark', mode?: 'sfw' | 'nsfw' }
+type OpenOptions = { width?: number, theme?: 'light' | 'dark', mode?: 'sfw' | 'nsfw', lang?: 'zh' | 'en', dataset?: 'full' | 'partial' | 'empty' }
 type Scene = {
   page: Page
   data: State['data']
@@ -112,8 +114,8 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
       const state = worker.current
       if (!state) throw new Error('Revealed Content API requires an active scenario')
       state.upstream.push(url)
-      if (url.pathname === '/api/v2/nav/home' && url.search === '?lang=zh') return { data: state.data.home }
-      if (state.directoryAllowed && url.pathname === '/api/v2/nav/sites/directory' && url.search === '?lang=zh') return { data: state.data.directory }
+      if (url.pathname === '/api/v2/nav/home' && url.search === `?lang=${state.lang}`) return { data: state.data.home }
+      if (state.directoryAllowed && url.pathname === '/api/v2/nav/sites/directory' && url.search === `?lang=${state.lang}`) return { data: state.data.directory }
       for (const id of state.expectedViews) {
         if (url.pathname === `/api/v2/nav/sites/${id}/view` && !url.search) return { data: { site_id: Number(id), view_count: 4321 } }
       }
@@ -158,7 +160,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
       await route.abort('blockedbyclient')
     })
     try {
-      await use({ async open({ width = 1440, theme = 'light', mode = 'sfw' } = {}) {
+      await use({ async open({ width = 1440, theme = 'light', mode = 'sfw', lang = 'zh', dataset = 'full' } = {}) {
         // A second open starts a fresh document/storage/data scenario, never a
         // mode-change event or internal Vue mutation. Close old timers first.
         const previous = scenes.at(-1)
@@ -168,9 +170,13 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
           previous.scene.assertQuiet()
           previous.state.upstreamEnd = app.requests.length
         }
-        const state: State = { data: scenarioData(), upstream: [], directoryAllowed: false,
+        const state: State = { lang, data: scenarioData(), upstream: [], directoryAllowed: false,
           expectedViews: new Set(), expectedPopups: new Set(), browserAPI: [], assets: [],
           weather: [], popups: [], external: [], failures: [], pages: [] }
+        if (dataset !== 'full') {
+          state.data.home.groups = []
+          state.data.home.spotlight = { page_size: 6, featured: dataset === 'partial' ? state.data.featured : [], popular: [], latest: [], random: [] }
+        }
         active = state
         evidence.push(state)
         revealedApp.current = state
@@ -185,6 +191,14 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
         await page.clock.setFixedTime(new Date(fixedNow))
         await page.addInitScript(({ origin, theme, mode, recent, steamKey, sample }) => {
           if (location.origin !== origin) return
+          const observer = new MutationObserver(() => {
+            const node = document.querySelector('.nav-header__background:not([data-hero-pending])')
+            if (node) {
+              (window as Window & { initialHeroNode?: Element }).initialHeroNode = node
+              observer.disconnect()
+            }
+          })
+          observer.observe(document, { childList: true, subtree: true })
           localStorage.clear()
           localStorage.setItem('theme', theme)
           localStorage.setItem('mode', mode)
@@ -215,8 +229,8 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
         const results = searchPanel.locator('.nav-tool-results button')
         const panels = content.locator('.spotlight-panel')
         const spotlight = content.locator(':scope > section')
-        const featured = panels.filter({ has: page.getByRole('heading', { name: '精选站点', exact: true }) })
-        const popular = panels.filter({ has: page.getByRole('heading', { name: '热门站点', exact: true }) })
+        const featured = panels.filter({ has: page.getByRole('heading', { name: lang === 'en' ? 'Featured' : '精选站点', exact: true }) })
+        const popular = panels.filter({ has: page.getByRole('heading', { name: lang === 'en' ? 'Popular' : '热门站点', exact: true }) })
         const card = (name: string) => content.locator('.nav-site-card').filter({ has: page.getByRole('heading', { name, exact: true }) })
         const settle = async (...targets: Locator[]) => {
           for (const target of targets) {
@@ -246,54 +260,50 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
         const assertQuiet = () => {
           expect(app.requests.slice(upstreamStart, state.upstreamEnd)).toEqual(state.upstream)
           expect(state.upstream.map(url => url.pathname + url.search)).toEqual([
-            '/api/v2/nav/home?lang=zh',
-            ...(state.directoryAllowed ? ['/api/v2/nav/sites/directory?lang=zh'] : []),
+            `/api/v2/nav/home?lang=${lang}`,
+            ...(state.directoryAllowed ? [`/api/v2/nav/sites/directory?lang=${lang}`] : []),
             ...[...state.expectedViews].map(id => `/api/v2/nav/sites/${id}/view`),
           ])
           expect(state.browserAPI).toEqual([
-            ...(state.directoryAllowed ? [{ method: 'GET', path: '/api/v2/nav/sites/directory?lang=zh' }] : []),
+            ...(state.directoryAllowed ? [{ method: 'GET', path: `/api/v2/nav/sites/directory?lang=${lang}` }] : []),
             ...[...state.expectedViews].map(id => ({ method: 'POST', path: `/api/v2/nav/sites/${id}/view` })),
           ])
-          expect(state.weather).toEqual([weatherURL])
+          expect(state.weather).toEqual(width >= 640 ? [weatherURL] : [])
           expect(state.popups).toEqual([...state.expectedPopups])
           expect(state.external).toEqual([])
           expect(state.failures).toEqual([])
           expect(state.pages.flatMap(value => value.errors)).toEqual([])
         }
-        const response = await page.goto('/', { waitUntil: 'load' })
+        const response = await page.goto(lang === 'en' ? '/en' : '/', { waitUntil: 'load' })
         expect(response?.status()).toBe(200)
         const ssr = await response!.text()
         expect(ssr).toContain(desktopKey)
         expect(ssr).toContain(mobileKey)
-        expect(ssr).toContain('Wolf Community')
+        if (dataset === 'full') expect(ssr).toContain('Wolf Community')
         await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as Element & { __vue_app__?: unknown })?.__vue_app__))
         await expect.poll(() => page.locator('html').evaluate(element => element.classList.contains('dark'))).toBe(theme === 'dark')
         await expect.poll(() => page.locator('.nav-header__background--managed img').evaluate((image: HTMLImageElement) =>
-          image.complete && image.naturalWidth > 0 && image.currentSrc)).toBe(heroURLs[0])
+          image.complete && image.naturalWidth > 0 && image.currentSrc)).toBe(heroURLs[width < 768 ? 1 : 0])
         await expect(dock).toHaveCount(0)
+        await assertHeroHydration(page, ssr, state.pages[0]!.errors, lang === 'en' ? '/en' : '/')
+        if (width >= 640) await expect.poll(() => state.weather.length).toBe(1)
         const scene: Scene = {
           page, data: state.data, ssr, shell, content, bar, quoteTrigger, author, groups, groupPopover, sitePopover,
           dock, rail, searchPanel, searchInput, results, panels, spotlight, featured, popular, card, settle, inside, assertQuiet,
           directoryCount: () => state.upstream.filter(url => url.pathname.endsWith('/directory')).length,
           async reveal() {
-            await page.mouse.move(20, 300)
-            await page.mouse.wheel(0, 300)
-            await expect(dock).toHaveCount(1)
+            // Historical helper name retained for Visual consumers. This is explicit
+            // test-only positioning, never a production Reveal action/expectation.
+            await scene.alignContent()
+            await expect(dock).toHaveCount(width >= 1024 ? 1 : 0)
             await expect(content).toBeVisible()
-            await expect.poll(() => shell.evaluate(element => {
-              // #145-A's fixed shell clearance is part of scrollIntoView's target.
-              const margin = parseFloat(getComputedStyle(element).scrollMarginTop) || 0
-              const target = Math.max(0, Math.min(element.getBoundingClientRect().top + scrollY - margin, document.documentElement.scrollHeight - innerHeight))
-              return Math.abs(scrollY - target)
-            })).toBeLessThanOrEqual(1)
-            await expect.poll(() => state.weather.length).toBe(1)
             await settle(content, bar)
             assertQuiet()
           },
           async alignContent() {
-            await shell.evaluate(element => element.scrollIntoView({ behavior: 'instant', block: 'start' }))
+            await shell.evaluate(element => window.scrollTo({ top: element.getBoundingClientRect().top + scrollY - (innerWidth >= 768 ? 88 : 0), behavior: 'instant' }))
             await expect.poll(() => shell.evaluate(element => {
-              const margin = parseFloat(getComputedStyle(element).scrollMarginTop) || 0
+              const margin = innerWidth >= 768 ? 88 : 0
               const target = Math.max(0, Math.min(element.getBoundingClientRect().top + scrollY - margin, document.documentElement.scrollHeight - innerHeight))
               return Math.abs(scrollY - target)
             })).toBeLessThanOrEqual(1)

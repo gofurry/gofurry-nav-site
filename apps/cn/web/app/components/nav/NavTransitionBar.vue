@@ -9,6 +9,7 @@
         <div class="nav-transition-bar__weather">
           <div class="nav-transition-bar__weather-spacer"></div>
           <iframe
+            loading="lazy"
             allowtransparency="true"
             src="https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc"
           ></iframe>

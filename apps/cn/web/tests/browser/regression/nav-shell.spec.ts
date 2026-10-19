@@ -445,6 +445,7 @@ for (const route of ['/', '/en'] as const) {
     await page.keyboard.press('Tab'); await expect(options).toHaveCount(1)
     await trigger.click(); await expect(options).toHaveCount(8)
     await page.setViewportSize({ width: 768, height: 600 })
+    await navShell.expectWeather()
     await expect(trigger).toBeHidden()
     await expect(options).toHaveCount(1)
     await expect(page.locator('.search-platform-row')).toBeVisible()

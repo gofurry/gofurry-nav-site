@@ -1,6 +1,121 @@
 import { test, expect, quote, weatherURL } from '../fixtures/nav-revealed-content'
 import { mkdir } from 'node:fs/promises'
 
+for (const lang of ['zh', 'en'] as const) for (const dataset of ['full', 'partial', 'empty'] as const) {
+  test(`145-B actual SSR content ${lang} ${dataset}`, async ({ revealed }) => {
+    const scene = await revealed.open({ lang, dataset, width: lang === 'en' ? 390 : 1440, mode: 'nsfw' })
+    const ssr = await scene.page.evaluate(html => {
+      const dom = new DOMParser().parseFromString(html, 'text/html')
+      const content = dom.querySelector('.nav-content')!
+      return { main: dom.querySelectorAll('main').length, footer: dom.querySelectorAll('.gf-footer-shell').length,
+        groups: [...content.querySelectorAll('.nav-group-title')].map(el => el.textContent?.trim()),
+        panels: content.querySelectorAll('.spotlight-panel').length,
+        emptyPanels: content.querySelectorAll('.spotlight-panel__empty').length,
+        cards: [...content.querySelectorAll('.nav-site-card')].map(el => el.textContent),
+        spotlight: [...content.querySelectorAll('.spotlight-site strong')].map(el => el.textContent),
+        images: [...content.querySelectorAll('img')].map(el => [el.loading, el.decoding, el.getAttribute('fetchpriority')]),
+        weather: dom.querySelector('iframe')?.getAttribute('loading') }
+    }, scene.ssr)
+    // Existing Spotlight keeps empty siblings when any panel has data.
+    expect(ssr).toMatchObject({ main: 1, footer: 1, panels: dataset === 'empty' ? 0 : 4,
+      emptyPanels: dataset === 'partial' ? 3 : 0, weather: 'lazy' })
+    expect(ssr.groups).toEqual(dataset === 'full' ? ['社区', '工具'] : [])
+    expect(ssr.cards).toHaveLength(dataset === 'full' ? 6 : 0)
+    if (dataset === 'full') {
+      expect(ssr.cards.join(' ')).toContain('Wolf Community · 发现、交流与创作')
+      expect(ssr.spotlight).toContain('精选资源 1')
+      expect(ssr.cards.join(' ')).not.toContain('Wolf After Dark')
+      expect(ssr.spotlight).not.toContain('Night Showcase')
+      // The saved client mode applies after SFW hydration, without changing SSR.
+      await expect(scene.card('Wolf After Dark')).toHaveCount(1)
+      await expect(scene.featured.getByText('Night Showcase', { exact: true })).toHaveCount(1)
+    }
+    for (const image of ssr.images) expect(image).toEqual(['lazy', 'async', 'low'])
+    expect(scene.directoryCount()).toBe(0)
+    expect(await scene.page.locator('.gf-footer-shell').evaluate(el => getComputedStyle(el).position)).toBe('relative')
+    expect(await scene.bar.evaluate(el => el.getBoundingClientRect().bottom <= document.querySelector('.nav-content')!.getBoundingClientRect().top)).toBe(true)
+    scene.assertQuiet()
+  })
+}
+
+test('145-B native wheel and keyboard remain continuous across live Reduced changes', async ({ context, revealed }) => {
+  await context.addInitScript(() => {
+    const scroll = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function (options) {
+      document.documentElement.dataset.productScrollCalls = String(Number(document.documentElement.dataset.productScrollCalls || 0) + 1)
+      scroll.call(this, options)
+    }
+    window.addEventListener('wheel', event => { document.documentElement.dataset.wheelCancelled = String(event.defaultPrevented) }, { passive: true })
+  })
+  const scene = await revealed.open()
+  const { page } = scene
+  for (const motion of ['no-preference', 'reduce', 'no-preference'] as const) {
+    await page.emulateMedia({ reducedMotion: motion })
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+    await page.mouse.move(10, 300)
+    await page.mouse.wheel(0, 120)
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(120)
+    await expect(page.locator('html')).toHaveAttribute('data-wheel-cancelled', 'false')
+    for (const target of [160, 200, 240]) {
+      await page.mouse.wheel(0, 40)
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(target)
+    }
+    expect(await scene.shell.evaluate(el => el.getBoundingClientRect().top)).toBe(660)
+    await expect(scene.dock).toHaveCount(0)
+    if (motion === 'no-preference' && process.env.GOFURRY_145_B_REVIEW === '1') {
+      await mkdir('../../../.cache/145-b-review', { recursive: true })
+      await page.screenshot({ path: '../../../.cache/145-b-review/desktop-hero-content-boundary.png' })
+    }
+    await page.keyboard.press('PageDown')
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(500)
+    await expect(scene.dock).toBeVisible()
+    await expect(page.locator('html')).not.toHaveAttribute('data-product-scroll-calls')
+  }
+  expect(scene.directoryCount()).toBe(0)
+  await page.keyboard.press('End')
+  await expect.poll(() => page.evaluate(() => Math.abs(scrollY + innerHeight - document.documentElement.scrollHeight))).toBeLessThanOrEqual(1)
+  await expect(scene.dock).toBeVisible()
+  await scene.openSearch()
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await expect(scene.dock).toHaveCount(0)
+  await expect(scene.searchPanel).toHaveCount(0)
+  expect(await page.evaluate(() => document.activeElement?.isConnected)).toBe(true)
+  await page.locator('a[href="/about"]').first().click()
+  await expect(scene.shell).toHaveCount(0)
+  await page.mouse.wheel(0, 120)
+  await expect(scene.dock).toHaveCount(0)
+  scene.assertQuiet()
+})
+
+test('145-B touch scroll keeps mobile content and the existing bottom-tab handoff', async ({ context, revealed }) => {
+  const scene = await revealed.open({ width: 390 })
+  const { page } = scene
+  const client = await context.newCDPSession(page)
+  await client.send('Emulation.setTouchEmulationEnabled', { enabled: true })
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 10, y: 300 }] })
+  for (const y of [280, 260, 240, 220, 200]) {
+    await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 10, y }] })
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())))
+  }
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(30)
+  expect(await page.evaluate(() => scrollY)).toBeLessThan(200)
+  await client.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
+  await expect(scene.dock).toHaveCount(0)
+  await page.mouse.wheel(0, 300)
+  await expect(page.locator('.mobile-bottom-tabs')).toHaveAttribute('aria-hidden', 'false')
+  await page.mouse.wheel(0, -150)
+  await expect(page.locator('.mobile-bottom-tabs')).toHaveAttribute('aria-hidden', 'false')
+  if (process.env.GOFURRY_145_B_REVIEW === '1') {
+    await mkdir('../../../.cache/145-b-review', { recursive: true })
+    await page.screenshot({ path: '../../../.cache/145-b-review/mobile-natural-scroll.png' })
+  }
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await expect(page.locator('.mobile-bottom-tabs')).toHaveAttribute('aria-hidden', 'true')
+  await expect(page.locator('.gf-nav')).not.toHaveAttribute('inert')
+  expect(scene.directoryCount()).toBe(0)
+  scene.assertQuiet()
+})
+
 test('B2 Site Popover keeps directional motion, geometry and live Reduced state', async ({ revealed }) => {
   const scene = await revealed.open({ width: 1000 })
   const { page, sitePopover } = scene
@@ -85,23 +200,11 @@ test('B2 Site Popover keeps directional motion, geometry and live Reduced state'
   scene.assertQuiet()
 })
 
-test('Reduced Reveal and Spotlight settle the selected target through live preference changes', async ({ revealed }) => {
+test('Reduced Spotlight settles the selected target through live preference changes', async ({ revealed }) => {
   const scene = await revealed.open({ theme: 'dark' })
   const { page, featured } = scene
-  // Change after hydration: Reveal must read the current setting at the scroll.
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await scene.shell.evaluate(element => {
-    window.addEventListener('wheel', event => element.setAttribute('data-observed-wheel-cancelled', String(event.defaultPrevented)), { once: true })
-    const scroll = element.scrollIntoView.bind(element)
-    element.scrollIntoView = options => {
-      element.setAttribute('data-observed-scroll', typeof options === 'object' ? options.behavior || 'auto' : 'auto')
-      scroll(options)
-    }
-  })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await scene.reveal()
-  await expect(scene.shell).toHaveAttribute('data-observed-scroll', 'instant')
-  await expect(scene.shell).toHaveAttribute('data-observed-wheel-cancelled', 'true')
   const next = featured.getByRole('button', { name: '精选站点 下一页', exact: true })
   const prev = featured.getByRole('button', { name: '精选站点 上一页', exact: true })
   const track = featured.locator('.spotlight-panel__track')
@@ -138,23 +241,6 @@ test('Reduced Reveal and Spotlight settle the selected target through live prefe
   await expect(scene.shell).toHaveCount(0)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  scene.assertQuiet()
-})
-
-test('Normal motion baseline retains smooth Reveal and its final content position', async ({ revealed }) => {
-  const scene = await revealed.open()
-  await scene.page.emulateMedia({ reducedMotion: 'no-preference' })
-  await scene.shell.evaluate(element => {
-    window.addEventListener('wheel', event => element.setAttribute('data-observed-wheel-cancelled', String(event.defaultPrevented)), { once: true })
-    const scroll = element.scrollIntoView.bind(element)
-    element.scrollIntoView = options => {
-      element.setAttribute('data-observed-scroll', typeof options === 'object' ? options.behavior || 'auto' : 'auto')
-      scroll(options)
-    }
-  })
-  await scene.reveal()
-  await expect(scene.shell).toHaveAttribute('data-observed-scroll', 'smooth')
-  await expect(scene.shell).toHaveAttribute('data-observed-wheel-cancelled', 'false')
   scene.assertQuiet()
 })
 
