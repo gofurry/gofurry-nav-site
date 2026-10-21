@@ -42,14 +42,14 @@ const heroURLs = [primary + '/' + desktopKey, primary + '/' + mobileKey]
 const weatherURL = 'https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc'
 export const searchPopupURL = 'https://www.bing.com/search?q=wolf%20furry'
 export const recentSeed = [
-  { id: 'recent-community', name: 'Community', url: 'https://community.example/' },
+  { id: 'recent-community', name: 'Community', url: 'https://community.example/topics/furry?sort=new#latest' },
   { id: 'recent-archive', name: 'Archive', url: 'https://archive.example/' },
 ]
 export const customSeed = [
-  { id: 'custom-art', name: 'Artwork', url: 'https://art.example/' },
+  { id: 'custom-art', name: 'Artwork', url: 'https://art.example/gallery/furry?view=grid#art' },
   { id: 'custom-wiki', name: 'Wiki', url: 'https://wiki.example/' },
 ]
-const favicon = (url: string) => `https://favicon.im/${url}?larger=true`
+const favicon = (url: string) => `https://a.favicon.im/${new URL(url).hostname}?larger=true&throw-error-on-404=true`
 const failedIcon = favicon(recentSeed[1]!.url)
 const seededIcons = [...recentSeed, ...customSeed].map(site => favicon(site.url))
 const iconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" rx="7" fill="#719489"/><path d="M8 24V8l8 8 8-8v16" fill="none" stroke="#fff5e9" stroke-width="3"/></svg>'

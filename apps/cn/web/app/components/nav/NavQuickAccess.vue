@@ -15,8 +15,8 @@
         >
           <template v-if="item">
             <img
-              v-if="!failedRecentIcons[item.id]"
-              :src="`https://favicon.im/${toExternalUrl(item.url)}?larger=true`"
+              v-if="!failedRecentIcons[item.id] && getSiteFaviconUrl(item.url)"
+              :src="getSiteFaviconUrl(item.url)"
               :alt="item.name"
               class="quick-site-icon"
               loading="lazy"
@@ -46,8 +46,8 @@
         >
           <template v-if="item.kind === 'site'">
             <img
-              v-if="!failedCustomIcons[item.site.id]"
-              :src="`https://favicon.im/${toExternalUrl(item.site.url)}?larger=true`"
+              v-if="!failedCustomIcons[item.site.id] && getSiteFaviconUrl(item.site.url)"
+              :src="getSiteFaviconUrl(item.site.url)"
               :alt="item.site.name"
               class="quick-site-icon"
               loading="lazy"
@@ -67,8 +67,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { toExternalUrl, type RecentSiteItem } from '@/utils/recentSites'
+import type { RecentSiteItem } from '@/utils/recentSites'
 import type { CustomSiteItem } from '@/utils/customSites'
+import { getSiteFaviconUrl } from '@/utils/favicon'
 
 const props = defineProps<{
   recentSites: RecentSiteItem[]
