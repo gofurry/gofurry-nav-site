@@ -56,7 +56,7 @@
           <button type="button" class="gf-nav__icon-button gf-nav__language inline-flex items-center justify-center"
             :aria-label="currentLang === 'zh' ? 'Switch to English' : '切换至中文'" :title="currentLang === 'zh' ? 'English' : '中文'"
             @click="switchLang">
-            {{ currentLang === 'zh' ? 'EN' : '中' }}
+            {{ currentLang === 'zh' ? '中' : 'EN' }}
           </button>
           <NavUtilities :blocked="showModeModal || mobileMenuOpen || inactive" />
         </div>

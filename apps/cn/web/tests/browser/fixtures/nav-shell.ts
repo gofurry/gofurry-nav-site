@@ -79,8 +79,9 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     const menu = nav.locator('.gf-nav__mobile-panel')
     const toggle = nav.locator('.gf-nav__mobile-toggle')
     const bottomTabs = page.locator('.mobile-bottom-tabs')
-    const language = (locale: 'CN' | 'EN', _mobile = false) => nav.locator('.gf-nav__language')
-      .filter({ hasText: locale === 'CN' ? '中' : 'EN' })
+    const language = (locale: 'CN' | 'EN', _mobile = false) => nav.getByRole('button', {
+      name: locale === 'CN' ? '切换至中文' : 'Switch to English', exact: true,
+    })
     const assertQuiet = () => {
       const upstream = shellApp.requests.slice(upstreamStart)
       const expected = home ? ['/api/v2/nav/home', '/api/v2/nav/home/saying'] : []
@@ -159,7 +160,12 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
           const ssr = await response!.text()
           expect(ssr).toContain('gf-nav')
           expect(ssr).toContain(home ? 'nav-home-page' : '服务条款')
-          await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as Element & { __vue_app__?: unknown })?.__vue_app__))
+          await page.waitForFunction(() => {
+            const app = (document.querySelector('#__nuxt') as Element & {
+              __vue_app__?: { config: { globalProperties: { $nuxt?: { isHydrating: boolean } } } }
+            })?.__vue_app__
+            return app?.config.globalProperties.$nuxt?.isHydrating === false
+          })
           await assertTheme(theme)
           await expect(nav).toHaveCount(1)
           await expect(nav).toBeVisible()
@@ -186,6 +192,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
         async assertLanguage(locale, mobile = false) {
           const target = language(locale === 'CN' ? 'EN' : 'CN', mobile)
           await expect(target).toBeVisible()
+          await expect(target).toHaveText(locale === 'CN' ? '中' : 'EN')
           await expect(target).toHaveAttribute('aria-label', locale === 'CN' ? 'Switch to English' : '切换至中文')
           await expect(nav.locator('.gf-nav__language')).toHaveCount(1)
           await expect(nav.locator('img[src*="flags"]')).toHaveCount(0)

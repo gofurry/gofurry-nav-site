@@ -34,6 +34,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Show the current language in the navigation toggle, matching the current-theme icon, while preserving language-switch actions.
 - Request Quick Access favicons from the official domain-only API for both recent and custom sites; preserve first-letter placeholders for invalid URLs and failed icons (#147).
 - Explicitly enable HTTP/2 negotiation in Nav Collector's existing transport, remove the conflicting static Connection header and retain final-response evidence through Facts (#92-A).
 - Try `/security.txt` once when the well-known path returns 200 HTML, accepting only a fully valid fallback; otherwise preserve the original invalid evidence. Keep `body_truncated` in Facts and synchronize HTTP/2 registry/checkpoint expectations (#92-C).

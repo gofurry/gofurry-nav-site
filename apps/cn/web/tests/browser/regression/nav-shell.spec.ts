@@ -189,6 +189,13 @@ test('Desktop Nav Shell retains theme through real language navigation', async (
   await expect(utilities.getByRole('link', { name: 'Lottery', exact: true })).toHaveAttribute('href', '/en/games/prize')
   await expect(utilities.getByRole('button', { name: 'Search sites', exact: true })).toBeVisible()
   await expect(utilities.getByRole('link', { name: 'Feedback', exact: true })).toHaveAttribute('href', 'https://github.com/gofurry/gofurry-nav-site/issues')
+  await nav.getByRole('button', { name: 'Toggle theme icon', exact: true }).click()
+  await navShell.assertTheme('light')
+  await navShell.assertLanguage('EN')
+  await navShell.language('CN').click()
+  await expect(page).toHaveURL(/\/terms$/)
+  await navShell.assertLanguage('CN')
+  await navShell.assertTheme('light')
   navShell.assertQuiet()
 })
 
