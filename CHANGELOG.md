@@ -10,6 +10,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
+- Add operations member Yukongze to About, refresh both team portraits, and update Faolan's resume with the founder role and Team Blog wording (#148).
 - Add trustworthy HTTP/2 adoption v2 based on an H2-enabled probe profile, final HTTPS protocol and TLS ALPN evidence. Retire adoption v1 and HTTP/2 transition v1 while preserving historical metrics, events, checkpoints and explicit historical evaluators; no transition v2 is introduced (#92-A).
 - Add reasoned Site archival to Admin: active/archived filtering, historical-domain lookup and read-only archived details. Keep soft deletion, transactional Audit, Collector exclusion and all historical evidence; do not invent reasons for old archived records.
 - Establish a shared Motion Contract with local Reduced Motion handling for Nav, Preferences, Games pagination and Insights Compare, including runtime preference changes and timer/RAF cleanup (#139).

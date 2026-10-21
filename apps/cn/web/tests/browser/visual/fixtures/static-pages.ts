@@ -117,7 +117,7 @@ export const test = base.extend<{ mountStaticPage: MountStaticPage }, { staticAp
           await expect(root).toHaveClass(/\babout-page\b/)
           expect(await panels.count()).toBeGreaterThanOrEqual(2)
           await expect(root.locator('.about-link').first()).toBeVisible()
-          await expect(root.locator('.about-avatar')).toHaveCount(1)
+          await expect(root.locator('.about-avatar')).toHaveCount(2)
         } else {
           await expect(root).toHaveClass(/\blegal-page\b/)
           await expect(root.locator('.gf-static-section-list')).toBeVisible()

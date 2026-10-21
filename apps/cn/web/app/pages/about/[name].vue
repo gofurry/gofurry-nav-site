@@ -80,7 +80,7 @@
                   rel="noopener noreferrer"
                   class="about-link"
               >
-                <span>{{ copy.personalBlog }}</span>
+                <span>{{ copy.teamBlog }}</span>
                 <span class="about-link__value">gopheratlas.com</span>
               </a>
             </div>
@@ -108,7 +108,7 @@ if (slug !== 'faolan') {
 }
 
 const isZh = computed(() => locale.value === 'zh')
-const avatarUrl = '/web/about/faolan.jpg'
+const avatarUrl = '/web/about/faolan.avif'
 const currentYear = new Date().getFullYear()
 const age = currentYear - 2002
 const yearsOfExperience = currentYear - 2024
@@ -123,7 +123,7 @@ const copy = computed(() => (
         workExperience: '在职经历',
         projectExperience: '项目经历',
         openSource: '开源与博客',
-        personalBlog: '个人博客',
+        teamBlog: '团队博客',
       }
     : {
         back: 'Back to About',
@@ -133,7 +133,7 @@ const copy = computed(() => (
         workExperience: 'Work Experience',
         projectExperience: 'Project Experience',
         openSource: 'Open Source & Blog',
-        personalBlog: 'Personal Blog',
+        teamBlog: 'Team Blog',
       }
 ))
 
@@ -164,12 +164,14 @@ const workExperiences = computed(() => (
         '中国央企 - 网络工程师',
         '小厂 - 网络安全 / 军工 - Golang 全栈',
         '小厂 - 互联网 - Golang 研发',
+        '成都远岸开物科技有限公司 — 创始人',
       ]
     : [
         'Small company - defense industry - Golang backend',
         'Chinese central state-owned enterprise - Network engineer',
         'Small company - cybersecurity / defense industry - Golang full-stack',
         'Small company - internet - Golang development',
+        "Chengdu Yuan'an Kaiwu Technology Co., Ltd. — Founder",
       ]
 ))
 
@@ -208,11 +210,11 @@ const pageSeo = computed(() => (
   isZh.value
     ? {
         title: 'Faolan Grey 简历 - GoFurry 兽人控导航站',
-        description: 'Faolan Grey 的软件工程师简历，包含教育背景、在职经历、项目经历、开源项目与个人博客。'
+        description: 'Faolan Grey 的软件工程师简历，包含教育背景、在职经历、项目经历、开源项目与团队博客。'
       }
     : {
         title: 'Faolan Grey Resume - GoFurry Navigation',
-        description: 'Resume of Faolan Grey, including education, work experience, project experience, open-source projects, and personal blog.'
+        description: 'Resume of Faolan Grey, including education, work experience, project experience, open-source projects, and team blog.'
       }
 ))
 
