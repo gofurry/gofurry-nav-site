@@ -30,7 +30,19 @@ for (const [route, kind, widths] of routes) for (const width of widths) for (con
     await expect(root).toBeVisible()
     await expect(root).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     const panels = root.locator('.' + kind + '-panel')
-    await expect(panels).toHaveCount(kind === 'about' ? 2 : 1)
+    await expect(panels).toHaveCount(kind === 'about' ? 3 : 1)
+    if (kind === 'about') {
+      for (const member of [panels.nth(0), panels.nth(1)]) await expect(member.locator('.about-avatar')).toHaveCount(1)
+      if (width === 1440) {
+        const faolan = (await panels.nth(0).boundingBox())!
+        const yukongze = (await panels.nth(1).boundingBox())!
+        const contact = (await panels.nth(2).boundingBox())!
+        expect(yukongze.x).toBeCloseTo(faolan.x, 0)
+        expect(yukongze.y).toBeGreaterThanOrEqual(faolan.y + faolan.height)
+        expect(contact.x).toBeGreaterThan(faolan.x + faolan.width)
+        expect(contact.y).toBeCloseTo(faolan.y, 0)
+      }
+    }
     for (const panel of await panels.all()) await expect(panel).toBeVisible()
     expect(await root.locator(kind === 'about' ? '.about-link' : '.gf-static-section-list').count()).toBeGreaterThan(0)
     expect((await root.innerText()).trim().length).toBeGreaterThan(20)

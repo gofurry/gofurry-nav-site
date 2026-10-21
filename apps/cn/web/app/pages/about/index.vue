@@ -5,50 +5,44 @@
     <main class="gf-static-page__main gf-static-page__main--about">
       <h1 class="sr-only">{{ pageSeo.heading }}</h1>
       <section class="gf-static-page__grid gf-static-page__grid--about">
-        <article class="about-panel">
+        <article
+            v-for="(member, index) in teamSection.members"
+            :key="member.name"
+            class="about-panel"
+            :class="{ 'lg:col-start-1 lg:row-start-2': index === 1 }"
+        >
           <div class="gf-static-kicker">
             {{ teamSection.kicker }}
           </div>
-          <p class="about-description">
-            {{ teamSection.desc }}
-          </p>
-          <div v-for="member in teamSection.members" :key="member.name">
-            <div class="about-person">
-              <img
-                  :src="member.avatar"
-                  :alt="member.name"
-                  class="about-avatar shrink-0"
-              />
-              <div>
-                <h2 class="about-name">
-                  {{ member.name }}
-                </h2>
-                <div class="about-role">
-                  {{ member.role }}
-                </div>
+          <div class="about-person">
+            <img
+                :src="member.avatar"
+                :alt="member.name"
+                class="about-avatar shrink-0"
+            />
+            <div>
+              <h2 class="about-name">
+                {{ member.name }}
+              </h2>
+              <div class="about-role">
+                {{ member.role }}
               </div>
             </div>
-            <p v-if="member.desc" class="about-description">{{ member.desc }}</p>
-            <div v-if="member.link || member.resumeAction" class="about-actions">
-              <a
-                  v-if="member.link"
-                  :href="member.link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="about-panel-action"
-              >
-                {{ member.action }}
-              </a>
-              <NuxtLink
-                  v-if="member.resumeAction"
-                  :to="localePath('/about/faolan')"
-                  class="about-panel-action about-panel-action--resume"
-              >
-                {{ member.resumeAction }}
-              </NuxtLink>
-            </div>
           </div>
-          <div class="about-actions">
+          <p class="about-description">
+            {{ member.desc }}
+            <template v-if="member.group"><br />{{ member.group }}</template>
+          </p>
+          <div v-if="member.link || member.resumeAction" class="about-actions">
+            <a
+                v-if="member.link"
+                :href="member.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="about-panel-action"
+            >
+              {{ member.action }}
+            </a>
             <a
                 :href="teamSection.issueLink"
                 target="_blank"
@@ -57,10 +51,17 @@
             >
               {{ teamSection.issueAction }}
             </a>
+            <NuxtLink
+                v-if="member.resumeAction"
+                :to="localePath('/about/faolan')"
+                class="about-panel-action about-panel-action--resume"
+            >
+              {{ member.resumeAction }}
+            </NuxtLink>
           </div>
         </article>
 
-        <article class="about-panel">
+        <article class="about-panel lg:col-start-2 lg:row-start-1">
           <div class="gf-static-kicker">
             {{ contact.kicker }}
           </div>
@@ -72,10 +73,6 @@
           </p>
 
           <div class="about-links">
-            <div class="about-link">
-              <span>{{ contact.groupLabel }}</span>
-              <span class="about-link__value">1074661551</span>
-            </div>
             <a
                 v-for="item in contact.links"
                 :key="item.label"
@@ -125,14 +122,14 @@ const teamSection = computed(() => (
   isZh.value
     ? {
         kicker: 'People Behind It',
-        desc: '我们共同维护兽人文化资源导航，提供站点信息与用户视角的网络观测数据。欢迎补充收录和反馈建议。',
         issueLink: 'https://github.com/gofurry/gofurry-nav-site/issues',
         issueAction: '提交您的建议',
         members: [{
           name: '福狼',
           role: '开发者 / 维护者',
           avatar: '/web/about/faolan.avif',
-          desc: '',
+          desc: '兽人控导航站站长，Golang 软件工程师。我们共同维护兽人文化资源导航，提供站点信息与用户视角的网络观测数据。欢迎补充收录和反馈建议。',
+          group: null,
           link: 'https://github.com/gofurry',
           action: '前往个人主页',
           resumeAction: '查看简历',
@@ -140,7 +137,8 @@ const teamSection = computed(() => (
           name: '于空泽',
           role: '运营成员',
           avatar: '/web/about/yukongze.avif',
-          desc: '主要负责兽游收录与资料补充。如有遗漏，欢迎补充！',
+          desc: '导航站运营人员，主要负责上传兽游。如有遗漏，欢迎补充！',
+          group: '导航站交流群1074661551',
           link: null,
           action: null,
           resumeAction: null,
@@ -148,14 +146,14 @@ const teamSection = computed(() => (
       }
     : {
         kicker: 'People Behind It',
-        desc: 'We maintain a directory of furry resources with site information and user-perspective web observations. Suggestions and listing updates are welcome.',
         issueLink: 'https://github.com/gofurry/gofurry-nav-site/issues',
         issueAction: 'Submit Suggestion',
         members: [{
           name: 'Faolan Grey',
           role: 'Developer / Maintainer',
           avatar: '/web/about/faolan.avif',
-          desc: '',
+          desc: 'GoFurry Navigation site owner and Golang software engineer. We maintain a directory of furry resources with site information and user-perspective web observations. Suggestions and listing updates are welcome.',
+          group: null,
           link: 'https://github.com/gofurry',
           action: 'Open project page',
           resumeAction: 'View Resume',
@@ -163,7 +161,8 @@ const teamSection = computed(() => (
           name: 'Yukongze',
           role: 'Operations member',
           avatar: '/web/about/yukongze.avif',
-          desc: 'I help list furry games and keep their information up to date. If anything is missing, please let us know!',
+          desc: 'GoFurry operations member, mainly responsible for adding furry games. If anything is missing, please let us know!',
+          group: 'Navigation QQ group: 1074661551',
           link: null,
           action: null,
           resumeAction: null,
@@ -176,7 +175,6 @@ const contact = computed(() => (
     ? {
         kicker: 'Contact',
         title: '站点反馈与交流合作',
-        groupLabel: '导航站交流群',
         desc: '欢迎提交问题、建议站点、补充收录信息，或者讨论兽人控导航站的后续方向。',
         links: [
           { label: '邮箱', value: '2660621624@qq.com', href: 'mailto:2660621624@qq.com', external: false },
@@ -187,7 +185,6 @@ const contact = computed(() => (
     : {
         kicker: 'Contact',
         title: 'Feedback & collaboration',
-        groupLabel: 'Navigation QQ group',
         desc: 'Get in touch to report issues, suggest sites, update game information, or discuss the project.',
         links: [
           { label: 'Email', value: '2660621624@qq.com', href: 'mailto:2660621624@qq.com', external: false },
