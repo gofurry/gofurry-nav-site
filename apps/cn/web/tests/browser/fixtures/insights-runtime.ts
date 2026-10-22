@@ -159,9 +159,6 @@ export function runtimeTest<S>(
           return route.fulfill({ contentType: 'application/octet-stream', headers: { 'access-control-allow-origin': '*' },
             path: fileURLToPath(new URL('../../fixtures/cdn-probe.bin', import.meta.url)) })
         }
-        if (image && url.pathname.startsWith('/nav/patterns/')) {
-          return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M1 1h3v3H1z"/></svg>' })
-        }
         if (url.origin === runtime.app.base || image || ['data:', 'blob:'].includes(url.protocol)) return route.continue()
         external.push(url.href)
         return route.abort('blockedbyclient')
@@ -208,7 +205,6 @@ function collectAssets(value: unknown, assets: Set<string>, upstream: string) {
   if (typeof value === 'string') {
     if (value.startsWith(upstream + '/media/')) assets.add(value)
     else if (/^nav\/sites\/\d+\/icon\/[a-f0-9]{32}\.[a-z]+$/.test(value)) assets.add(upstream + '/' + value)
-    else if (/^nav\/patterns\/[a-f0-9]{32}\.svg$/.test(value)) assets.add(upstream + '/' + value)
   } else if (Array.isArray(value)) for (const item of value) collectAssets(item, assets, upstream)
   else if (value && typeof value === 'object') for (const item of Object.values(value)) collectAssets(item, assets, upstream)
 }

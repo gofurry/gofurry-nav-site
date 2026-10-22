@@ -83,7 +83,6 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
         if (page === state.failedCatalogPage) return { status: 503 }
         return { data: { schema_version: 1, variant, page_num: page, page_size: size, total: items.length, items: items.slice((page - 1) * size, page * size), selected: items.find(item => item.id === url.searchParams.get('selected_id')) ?? null } }
       }
-      if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: { schema_version: 1, patterns: [] } }
       return { data: [] }
     }, { NUXT_PUBLIC_ASSET_PRIMARY_BASE: heroOrigins.primary, NUXT_PUBLIC_ASSET_MIRROR_BASE: heroOrigins.mirror })
     try { await use(worker) }

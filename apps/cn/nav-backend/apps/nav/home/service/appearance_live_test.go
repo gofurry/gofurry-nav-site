@@ -31,16 +31,10 @@ func TestRealDevAppearanceQueries(t *testing.T) {
 	// Clone Goose-owned table definitions into this connection's temporary schema.
 	// The production tables and records are never changed by query acceptance.
 	_, err = tx.Exec(ctx, `CREATE TEMP TABLE gfn_home_hero_asset (LIKE public.gfn_home_hero_asset INCLUDING ALL) ON COMMIT DROP;
-CREATE TEMP TABLE gfn_background_pattern (LIKE public.gfn_background_pattern INCLUDING ALL) ON COMMIT DROP;
 INSERT INTO pg_temp.gfn_home_hero_asset(id,variant,name,object_key,enabled,deleted) VALUES
 (1,'desktop','visible','nav/hero/desktop/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.avif',true,false),
 (2,'desktop','disabled','nav/hero/desktop/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.avif',false,false),
-(3,'desktop','deleted','nav/hero/desktop/cccccccccccccccccccccccccccccccc.avif',true,true);
-INSERT INTO pg_temp.gfn_background_pattern(id,name,name_en,object_key,light_color,dark_color,light_opacity,dark_opacity,default_size_px,enabled,sort_order,deleted) VALUES
-(1,'later','later','nav/patterns/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.svg','#123456','#abcdef',0.1,0.2,96,true,20,false),
-(2,'first','first','nav/patterns/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.svg','#123456','#abcdef',0.25,0.5,128,true,10,false),
-(3,'disabled','disabled','nav/patterns/cccccccccccccccccccccccccccccccc.svg','#123456','#abcdef',0.1,0.2,96,false,0,false),
-(4,'deleted','deleted','nav/patterns/dddddddddddddddddddddddddddddddd.svg','#123456','#abcdef',0.1,0.2,96,true,0,true);`)
+(3,'desktop','deleted','nav/hero/desktop/cccccccccccccccccccccccccccccccc.avif',true,true);`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +48,6 @@ INSERT INTO pg_temp.gfn_background_pattern(id,name,name_en,object_key,light_colo
 	}
 	if _, err := q.RandomHeroAsset(ctx, "mobile"); err != pgx.ErrNoRows {
 		t.Fatal("empty mobile pool crossed to desktop")
-	}
-	patterns, queryErr := svc.GetPatterns(ctx)
-	if queryErr != nil || len(patterns.Patterns) != 2 || patterns.Patterns[0].ID != 2 || patterns.Patterns[0].LightOpacity != 0.25 {
-		t.Fatal("catalog filtering, sorting or numeric conversion failed")
 	}
 	if _, err := tx.Exec(ctx, `UPDATE pg_temp.gfn_home_hero_asset SET deleted=true WHERE id=1`); err != nil {
 		t.Fatal(err)

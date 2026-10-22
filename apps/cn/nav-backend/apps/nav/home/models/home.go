@@ -108,19 +108,3 @@ type HomeHeroResponse struct {
 	ReasonMessages []string  `json:"reason_messages,omitempty"`
 	Hero           HomeHero  `json:"hero"`
 }
-
-type BackgroundPattern struct {
-	ID            int64   `json:"id,string"`
-	Name          string  `json:"name"`
-	NameEn        string  `json:"name_en"`
-	ObjectKey     string  `json:"object_key"`
-	LightColor    string  `json:"light_color"`
-	DarkColor     string  `json:"dark_color"`
-	LightOpacity  float64 `json:"light_opacity"`
-	DarkOpacity   float64 `json:"dark_opacity"`
-	DefaultSizePx int32   `json:"default_size_px"`
-}
-type PatternCatalog struct {
-	SchemaVersion int                 `json:"schema_version"`
-	Patterns      []BackgroundPattern `json:"patterns"`
-}

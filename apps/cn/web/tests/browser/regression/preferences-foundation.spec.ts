@@ -59,9 +59,9 @@ test('Preferences interrupts only its own motion; close is inert, restores focus
   await expect(backdrop).toHaveAttribute('data-enter-observed', 'true')
   await input.fill('draft')
 
-  const tabs = page.getByRole('tab')
+  const tabs = page.locator('.gf-preferences-modal > .preferences-tabs').getByRole('tab')
   await tabs.first().focus()
-  for (const [key, index] of [['End', 2], ['ArrowLeft', 1], ['Home', 0]] as const) {
+  for (const [key, index] of [['End', 1], ['ArrowLeft', 0], ['Home', 0]] as const) {
     await page.keyboard.press(key)
     await expect(tabs.nth(index)).toBeFocused()
     await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true')
@@ -174,29 +174,8 @@ test('Quick Access Space/Enter, focus, Cancel and Save retain their draft semant
   expect(preferences.errors).toEqual([])
 })
 
-test('Background palette resolves all 12 Preferences presets and applies the selected color', async ({ page, preferences }) => {
-  await preferences.open({ theme: 'light' })
-  await preferences.openPreferences()
-  const backgroundTab = page.getByRole('tab', { name: '页面背景', exact: true })
-  await backgroundTab.click()
-  await expect(backgroundTab).toHaveAttribute('aria-selected', 'true')
-  const editor = page.locator('[data-background-preferences]')
-  const toggle = editor.getByRole('button', { name: '选择图案颜色', exact: true })
-  await toggle.click()
-  const palette = editor.getByRole('group', { name: '常用颜色', exact: true })
-  const presets = palette.getByRole('button')
-  await expect(presets).toHaveCount(12)
-  await expect(presets.first()).toHaveAttribute('aria-label', '#9c846a')
-  await palette.getByRole('button', { name: '#9c846a', exact: true }).click()
-  await expect(editor.getByRole('textbox', { name: '图案颜色', exact: true })).toHaveValue('#9c846a')
-  await toggle.click()
-  await expect(palette.getByRole('button', { name: '#9c846a', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await preferences.cancelPreferences()
-  expect(preferences.errors).toEqual([])
-})
-
 for (const width of [1440, 390, 320]) for (const dark of [false, true]) {
-  test(`${width}px ${dark ? 'dark' : 'light'} Preferences share source appearance with no overflow and visible focus`, async ({ page, preferences }) => {
+  test(`${width}px ${dark ? 'dark' : 'light'} Preferences retain Hero source appearance with no overflow and visible focus`, async ({ page, preferences }) => {
     await preferences.open({ width, mode: 'fixed', desktopId: '34' })
     await page.evaluate(dark => document.documentElement.classList.toggle('dark', dark), dark)
     await preferences.openPreferences()
@@ -208,14 +187,7 @@ for (const width of [1440, 390, 320]) for (const dark of [false, true]) {
       const animations = document.querySelector('.gf-preferences-modal')!.getAnimations({ subtree: true })
       await Promise.all(animations.filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {})))
     })
-    const styles = await page.evaluate(() => {
-      const read = (selector: string) => {
-        const style = getComputedStyle(document.querySelector(selector)!)
-        return ['padding', 'borderRadius', 'borderColor', 'backgroundColor', 'color', 'fontSize', 'lineHeight'].map(key => style[key as keyof CSSStyleDeclaration])
-      }
-      return [read('[data-hero-preferences] .preferences-sources button[aria-pressed="true"]'), read('[data-background-preferences] .preferences-sources button[aria-pressed="true"]')]
-    })
-    expect(styles[0]).toEqual(styles[1])
+    await expect(page.locator('.gf-preferences-modal > .preferences-tabs').getByRole('tab')).toHaveCount(2)
     const widths = await page.locator('[data-hero-preferences] .preferences-sources button').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().width))
     expect(widths).toHaveLength(3)
     expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(1)

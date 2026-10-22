@@ -51,6 +51,8 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 托管资产由 Admin 发布到 COS Primary 与 R2 尽力镜像，分别通过 EdgeOne 主 CDN 和 Cloudflare 镜像 CDN 分发。数据库保存与云厂商无关的对象键，前端使用浏览器优选与失败回退。详见[托管资产说明](./docs/managed-assets.md)与[资产契约](./contracts/assets.md)。
 
+公开页面统一使用随仓库发布的静态 WebP 花纹；设置仅保留首页与资源路由。首页 Hero 的本地图像能力独立保留。
+
 ## 技术栈
 
 - Go / Fiber

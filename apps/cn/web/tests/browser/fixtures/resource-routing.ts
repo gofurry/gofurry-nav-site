@@ -11,7 +11,6 @@ export const origins = { primary: 'https://primary.example', mirror: 'https://mi
 export const iconKey = 'nav/sites/1/icon/' + 'a'.repeat(32) + '.svg'
 export const nextIconKey = iconKey.replace(/a{32}/, 'b'.repeat(32))
 export const heroKey = 'nav/hero/desktop/' + 'a'.repeat(32) + '.avif'
-const patternKey = 'nav/patterns/' + 'a'.repeat(32) + '.svg'
 export const steamSource = 'https://shared.steamstatic.com/store_item_assets/steam/apps/570/header.jpg'
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="45"><rect width="120" height="45" fill="#78644b"/></svg>'
 
@@ -54,9 +53,6 @@ export const test = base.extend<{ routing: RoutingScenario }, { routingApp: Rout
         spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },
         saying: null, ping: {}, hero: { desktop: { id: '1', object_key: heroKey }, mobile: null },
       } }
-      if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: {
-        schema_version: 1, patterns: [{ id: '1', name: 'Fixture pattern', name_en: 'Fixture pattern', object_key: patternKey, light_color: '#123456', dark_color: '#abcdef', light_opacity: .12, dark_opacity: .08, default_size_px: 120 }],
-      } }
       if (url.pathname.endsWith('/game/collections/home')) return { data: { ...collectionMetadata, slots: [] } }
       if (url.pathname.endsWith('/game/home/showcase')) return { data: emptyGameShowcase() }
       if (url.pathname.endsWith('/game/home')) {
@@ -95,7 +91,6 @@ export const test = base.extend<{ routing: RoutingScenario }, { routingApp: Rout
           await context.addCookies(Object.entries(options.cookies || {}).map(([name, value]) => ({ name, value, url: routingApp.base })))
           await context.addInitScript(({ baseURL, legacy }) => {
             if (location.origin !== baseURL) return
-            localStorage.setItem('gf_background_preference', JSON.stringify({ version: 1, source: 'server', pattern_id: '1', overrides: {} }))
             if (legacy) localStorage.setItem('gofurry:steam-shared-cdn-preference:v1', JSON.stringify(legacy))
           }, { baseURL: routingApp.base, legacy: options.legacySteamRecommendation })
           await context.route('**/*', async route => {
@@ -132,7 +127,7 @@ export const test = base.extend<{ routing: RoutingScenario }, { routingApp: Rout
         async openResourceRouting() {
           await page.locator('.gf-nav__mode-button').click()
           await page.locator('.preferences-tabs').getByRole('tab').last().click()
-          await settleTab(2)
+          await settleTab(1)
         },
         savePreferences: () => finishPreferences('primary'),
         cancelPreferences: () => finishPreferences('ghost'),
@@ -167,7 +162,6 @@ export function readManagedResources(page: Page) {
   return page.evaluate(() => ({
     icon: document.querySelector<HTMLImageElement>('.nav-site-card__logo img')!.src,
     hero: document.querySelector<HTMLImageElement>('.nav-header__background--managed img')!.currentSrc,
-    pattern: getComputedStyle(document.querySelector('.gf-public-background__pattern')!).maskImage,
   }))
 }
 

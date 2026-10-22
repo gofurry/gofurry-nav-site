@@ -27,7 +27,7 @@ func TestReleaseNotesPublicRoutes(t *testing.T) {
 	for _, tc := range []struct {
 		path   string
 		status int
-	}{{"/api/v2/nav/updates", 204}, {"/api/v2/nav/updates/12?lang=en", 200}} {
+	}{{"/api/v2/nav/appearance/patterns", 404}, {"/api/v2/nav/updates", 204}, {"/api/v2/nav/updates/12?lang=en", 200}} {
 		response, err := app.Test(httptest.NewRequest("GET", tc.path, nil))
 		if err != nil {
 			t.Fatal(err)
@@ -50,8 +50,6 @@ func (updatesRouteStub) GetHomePing(c fiber.Ctx) error { return c.SendStatus(fib
 func (updatesRouteStub) GetHomeSaying(c fiber.Ctx) error { return c.SendStatus(fiber.StatusNoContent) }
 
 func (updatesRouteStub) GetHomeHero(c fiber.Ctx) error { return c.SendStatus(fiber.StatusNoContent) }
-
-func (updatesRouteStub) GetPatterns(c fiber.Ctx) error { return c.SendStatus(fiber.StatusNoContent) }
 
 func (updatesRouteStub) GetHeroes(c fiber.Ctx) error { return c.SendStatus(fiber.StatusNoContent) }
 

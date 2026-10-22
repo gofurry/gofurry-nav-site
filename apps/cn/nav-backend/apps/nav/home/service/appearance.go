@@ -17,7 +17,6 @@ type appearanceReader interface {
 	PublicHeroAsset(context.Context, navsqlc.PublicHeroAssetParams) (navsqlc.PublicHeroAssetRow, error)
 	CountPublicHeroAssets(context.Context, string) (int64, error)
 	PublicHeroAssets(context.Context, navsqlc.PublicHeroAssetsParams) ([]navsqlc.PublicHeroAssetsRow, error)
-	PublicBackgroundPatterns(context.Context) ([]navsqlc.PublicBackgroundPatternsRow, error)
 }
 
 func (svc *homeService) WithAppearance(reader appearanceReader) *homeService {
@@ -105,23 +104,6 @@ func (svc *homeService) GetHeroes(ctx context.Context, query models.HeroCatalogQ
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			return response, unavailable
 		}
-	}
-	return response, nil
-}
-
-func (svc *homeService) GetPatterns(ctx context.Context) (models.PatternCatalog, common.GFError) {
-	response := models.PatternCatalog{SchemaVersion: 1, Patterns: []models.BackgroundPattern{}}
-	if svc.appearance == nil {
-		return response, common.NewServiceError("Pattern catalog unavailable")
-	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	rows, err := svc.appearance.PublicBackgroundPatterns(ctx)
-	if err != nil {
-		return response, common.NewServiceError("Pattern catalog unavailable")
-	}
-	for _, row := range rows {
-		response.Patterns = append(response.Patterns, models.BackgroundPattern{ID: row.ID, Name: row.Name, NameEn: row.NameEn, ObjectKey: row.ObjectKey, LightColor: row.LightColor, DarkColor: row.DarkColor, LightOpacity: row.LightOpacity, DarkOpacity: row.DarkOpacity, DefaultSizePx: row.DefaultSizePx})
 	}
 	return response, nil
 }

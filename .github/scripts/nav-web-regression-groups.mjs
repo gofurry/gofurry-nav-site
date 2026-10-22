@@ -44,7 +44,7 @@ export const regressionGroups = Object.freeze({
     'insights-navigation.spec.ts',
   ]),
   'insights-nav': Object.freeze([
-    'background-storage.spec.ts',
+    'static-page-background.spec.ts',
     'hero-catalog.spec.ts',
     'hero-handoff.spec.ts',
     'hero-lifecycle.spec.ts',

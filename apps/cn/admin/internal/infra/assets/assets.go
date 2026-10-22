@@ -66,8 +66,6 @@ func NewObject(kind string, siteID int64, filename string, data []byte) (Object,
 		o.Key = fmt.Sprintf("nav/sites/%d/icon/%s%s", siteID, o.SHA256[:32], ext)
 	case "hero-desktop", "hero-mobile":
 		o.Key = "nav/hero/" + strings.TrimPrefix(kind, "hero-") + "/" + o.SHA256[:32] + ".avif"
-	case "pattern":
-		o.Key = "nav/patterns/" + o.SHA256[:32] + ".svg"
 	default:
 		return o, errors.New("unsupported asset kind")
 	}

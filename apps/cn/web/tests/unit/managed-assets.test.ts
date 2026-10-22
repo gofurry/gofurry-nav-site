@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { assetURL, assetCandidate, chooseAssetCDN, probeAssetCDNs, ASSET_PROBE_SHA256 } from '../../app/utils/managedAssets'
-import { parseBackgroundPreference, patternAppearance } from '../../app/utils/backgroundPreferences'
 
 const origins = { primary: 'https://primary.example.com', mirror: 'https://mirror.example.com' }
 const key = `nav/hero/desktop/${'a'.repeat(32)}.avif`
@@ -52,20 +51,5 @@ describe('managed assets', () => {
     const failure = await probeAssetCDNs(origins, async () => new Response(new Uint8Array(8192)))
     expect(failure.primaryMs).toBeNull()
     expect(failure.mirrorMs).toBeNull()
-  })
-})
-
-describe('background preferences', () => {
-  it('keeps string IDs and only explicit, valid overrides', () => {
-    expect(parseBackgroundPreference(JSON.stringify({ version: 1, source: 'server', pattern_id: '9007199254740993', overrides: { opacity: 0, size_px: 200 }, blob: 'must not persist', object_key: key, light_color: '#ffffff' })))
-      .toEqual({ version: 1, source: 'server', pattern_id: '9007199254740993', overrides: { opacity: 0, size_px: 200 } })
-    expect(parseBackgroundPreference('{"version":2,"source":"local"}')).toEqual({ version: 1, source: 'default', overrides: {} })
-    expect(parseBackgroundPreference('{"version":1,"source":"local","overrides":{"opacity":2,"size_px":0,"color":"url(https://x)"}}').overrides).toEqual({})
-  })
-
-  it('preserves zero opacity and follows catalog updates without overrides', () => {
-    const defaults = { light_color: '#123456', dark_color: '#abcdef', light_opacity: 0.1, dark_opacity: 0.2, default_size_px: 160 }
-    expect(patternAppearance(defaults, 'dark', { opacity: 0 })).toEqual({ color: '#abcdef', opacity: 0, size: 160 })
-    expect(patternAppearance({ ...defaults, default_size_px: 240 }, 'light', {})).toEqual({ color: '#123456', opacity: 0.1, size: 240 })
   })
 })

@@ -126,12 +126,12 @@ test('global and page tokens share the canonical tokens.less root and dark owner
   const facts = extractCssFacts(`:root {
   --gf-surface: rgba(1, 2, 3, .5);
   --gf-page-background: #123456;
-  --gf-page-pattern-color: #ABCDEF;
+  --gf-text-main: #ABCDEF;
 }
 html.dark {
   --gf-surface: rgba(4, 5, 6, .5);
   --gf-page-background: #654321;
-  --gf-page-pattern-color: #FEDCBA;
+  --gf-text-main: #FEDCBA;
 }`, { file: 'app/assets/styles/tokens.less', less: true });
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), []);
 });
@@ -157,11 +157,11 @@ html.dark .site-group-page .child { --nav-site-group-card-bg: #555; }
 test('main.css root and dark page-token declarations are no longer approved owners', () => {
   const facts = extractCssFacts(`:root {
   --gf-page-background: #123456;
-  --gf-page-pattern-color: #ABCDEF;
+  --gf-text-main: #ABCDEF;
 }
 html.dark {
   --gf-page-background: #654321;
-  --gf-page-pattern-color: #FEDCBA;
+  --gf-text-main: #FEDCBA;
 }`, { file: 'app/assets/css/main.css' });
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#123456', '#ABCDEF', '#654321', '#FEDCBA']);
 });

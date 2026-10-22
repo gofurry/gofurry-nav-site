@@ -11,7 +11,7 @@ export type AssetOrigins = Record<AssetCDN, string>
 export const ASSET_CDN_TTL_SECONDS = 12 * 60 * 60
 export const ASSET_PROBE_KEY = 'system/probes/cdn.bin'
 export const ASSET_PROBE_SHA256 = 'a2dacdf8cbd7f21e14efa73f83610bc1f40225cae90e691788000ca82cd8004e'
-const managedKey = /^(?:nav\/sites\/[1-9]\d*\/icon\/[a-f0-9]{32}(?:\.[a-z0-9]{1,16})?|nav\/hero\/(?:desktop|mobile)\/[a-f0-9]{32}\.avif|nav\/patterns\/[a-f0-9]{32}\.svg|game\/showcase\/[1-9]\d*\/(?:desktop|mobile)\/[a-f0-9]{32}\.avif)$/
+const managedKey = /^(?:nav\/sites\/[1-9]\d*\/icon\/[a-f0-9]{32}(?:\.[a-z0-9]{1,16})?|nav\/hero\/(?:desktop|mobile)\/[a-f0-9]{32}\.avif|game\/showcase\/[1-9]\d*\/(?:desktop|mobile)\/[a-f0-9]{32}\.avif)$/
 
 export function assetURL(origins: AssetOrigins, provider: AssetCDN, key: string | null | undefined) {
   if (!key || !managedKey.test(key)) return ''

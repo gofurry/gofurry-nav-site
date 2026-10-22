@@ -2,10 +2,9 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
-	"math"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -52,27 +51,6 @@ type heroDTO struct {
 	assetLinks
 }
 
-type patternPayload struct {
-	Name          string  `json:"name"`
-	NameEn        string  `json:"name_en"`
-	LightColor    string  `json:"light_color"`
-	DarkColor     string  `json:"dark_color"`
-	LightOpacity  float64 `json:"light_opacity"`
-	DarkOpacity   float64 `json:"dark_opacity"`
-	DefaultSizePx int32   `json:"default_size_px"`
-	Enabled       bool    `json:"enabled"`
-	SortOrder     int64   `json:"sort_order"`
-}
-
-type patternDTO struct {
-	ID int64 `json:"id,string"`
-	patternPayload
-	ObjectKey  string    `json:"object_key"`
-	CreateTime time.Time `json:"create_time"`
-	UpdateTime time.Time `json:"update_time"`
-	assetLinks
-}
-
 type publicationDTO struct {
 	assets.Publication
 	Item any `json:"item"`
@@ -84,10 +62,6 @@ func (api *navAPI) links(key string) assetLinks {
 
 func (api *navAPI) hero(row navsqlc.GfnHomeHeroAsset) heroDTO {
 	return heroDTO{ID: row.ID, Variant: row.Variant, heroPayload: heroPayload{row.Name, row.Enabled}, ObjectKey: row.ObjectKey, CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time, assetLinks: api.links(row.ObjectKey)}
-}
-
-func (api *navAPI) pattern(row navsqlc.GetBackgroundPatternRow) patternDTO {
-	return patternDTO{ID: row.ID, patternPayload: patternPayload{row.Name, row.NameEn, row.LightColor, row.DarkColor, row.LightOpacity, row.DarkOpacity, row.DefaultSizePx, row.Enabled, row.SortOrder}, ObjectKey: row.ObjectKey, CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time, assetLinks: api.links(row.ObjectKey)}
 }
 
 func decodeAssetJSON(data []byte, target any) common.Error {
@@ -104,26 +78,6 @@ func decodeAssetJSON(data []byte, target any) common.Error {
 
 func validateAssetName(name string) bool {
 	return strings.TrimSpace(name) != "" && utf8.RuneCountInString(name) <= 120
-}
-
-var assetColor = regexp.MustCompile(`^#[a-fA-F0-9]{6}$`)
-
-func validatePattern(req patternPayload) common.Error {
-	if !validateAssetName(req.Name) || !validateAssetName(req.NameEn) {
-		return common.NewValidationError("name and name_en are required (at most 120 characters)")
-	}
-	if !assetColor.MatchString(req.LightColor) || !assetColor.MatchString(req.DarkColor) {
-		return common.NewValidationError("colors must use #RRGGBB")
-	}
-	for _, value := range []float64{req.LightOpacity, req.DarkOpacity} {
-		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 1 {
-			return common.NewValidationError("opacity must be between 0 and 1")
-		}
-	}
-	if req.DefaultSizePx <= 0 {
-		return common.NewValidationError("default_size_px must be positive")
-	}
-	return nil
 }
 
 func uploadObject(c fiber.Ctx, kind string, siteID int64) (assets.Object, common.Error) {
@@ -210,4 +164,33 @@ func (api *navAPI) ClearSiteIcon(c fiber.Ctx) error {
 	}
 	invalidateNavSiteListCache()
 	return common.NewResponse(c).SuccessWithData(map[string]any{"icon": nil})
+}
+
+func assetUpdateAction(kind string, before, after bool) string {
+	if before == after {
+		return kind + ".update"
+	}
+	if after {
+		return kind + ".enable"
+	}
+	return kind + ".disable"
+}
+
+func (store *navStore) mutateAsset(ctx context.Context, meta audit.Meta, action, resource string, change func(*navsqlc.Queries) (int64, any, any, string, error)) common.Error {
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return navDAOError(err)
+	}
+	defer tx.Rollback(ctx)
+	id, before, after, verb, err := change(store.q.WithTx(tx))
+	if err != nil {
+		return navDAOError(err)
+	}
+	if verb != "" {
+		action = verb
+	}
+	if err := store.audit.Log(ctx, meta, action, resource, id, before, after); err != nil {
+		return err
+	}
+	return navDAOError(tx.Commit(ctx))
 }

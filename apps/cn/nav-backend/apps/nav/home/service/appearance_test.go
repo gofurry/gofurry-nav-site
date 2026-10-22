@@ -29,9 +29,6 @@ func (f fakeAppearance) RandomHeroAsset(_ context.Context, variant string) (navs
 	}
 	return navsqlc.RandomHeroAssetRow{ID: 9007199254740993, ObjectKey: "nav/hero/" + variant + "/" + strings.Repeat("a", 32) + ".avif"}, nil
 }
-func (fakeAppearance) PublicBackgroundPatterns(context.Context) ([]navsqlc.PublicBackgroundPatternsRow, error) {
-	return []navsqlc.PublicBackgroundPatternsRow{{ID: 9007199254740993, Name: "图案", NameEn: "Pattern", ObjectKey: "nav/patterns/" + strings.Repeat("b", 32) + ".svg", DefaultSizePx: 96, LightOpacity: 0.1}}, nil
-}
 func TestIndependentHeroPools(t *testing.T) {
 	for _, tc := range []fakeAppearance{{desktop: true, mobile: true}, {desktop: true}, {mobile: true}, {}, {desktop: true, mobile: true, failed: "desktop"}} {
 		svc := newHomeService(nil, time.Now).WithAppearance(tc)
@@ -82,19 +79,5 @@ func TestFixedHeroSelection(t *testing.T) {
 	local := newHomeService(nil, time.Now).GetHomeHero(context.Background(), models.HeroSelection{Local: true})
 	if local.Hero.Desktop != nil || local.Hero.Mobile != nil || local.State != models.HomeStateReady {
 		t.Fatal("local selected cloud assets")
-	}
-}
-func TestPatternPublicContract(t *testing.T) {
-	svc := newHomeService(nil, time.Now).WithAppearance(fakeAppearance{})
-	result, err := svc.GetPatterns(context.Background())
-	if err != nil || result.SchemaVersion != 1 || len(result.Patterns) != 1 {
-		t.Fatal("catalog missing")
-	}
-	data, _ := json.Marshal(result)
-	if !strings.Contains(string(data), `"id":"9007199254740993"`) || strings.Contains(string(data), "https://") {
-		t.Fatal("public asset contract violated")
-	}
-	if models.HomeSchemaVersion != 4 {
-		t.Fatal("home schema was not bumped")
 	}
 }

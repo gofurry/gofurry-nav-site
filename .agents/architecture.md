@@ -16,12 +16,12 @@ Task has no deployment or database operations and does not load `.env`.
 | Nav Backend | `gfn` | existing Nav V1 and V2 behavior remains supported |
 | Admin | explicit `gfa`, `gfn`, `gfg` pools | `gfa` auth/audit/collaboration inventory and shared canvas; no cross-DB transaction claim |
 
-Admin owns managed Site icons, independent desktop/mobile Hero pools and SVG
-patterns. It verifies COS Primary before committing business references and treats
+Admin owns managed Site icons and independent desktop/mobile Hero pools. It verifies COS Primary before committing business references and treats
 R2 Mirror failure as a warning. CloudOps uses scoped capabilities and GFA audit;
 there is no asset registry, replica table or synchronization worker. Nav Backend
 returns object keys, and Nuxt resolves the CDN using an SSR-readable preference
-cookie and browser probes. Local backgrounds stay in IndexedDB. See
+cookie and browser probes. Local Hero backgrounds stay in IndexedDB; public page
+texture is a single bundled WebP rendered statically by CSS. See
 `contracts/assets.md` and `docs/managed-assets.md`.
 This architecture entered production on 2026-09-14. Initial cutover is complete;
 `docs/managed-assets-cutover.md` is historical/rollback context and a first-deployment

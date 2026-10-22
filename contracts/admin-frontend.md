@@ -35,10 +35,10 @@ Themes default to the system preference. The shared header exposes a single Ligh
 
 The backend authorization contract remains authoritative. Navigation and actions ask whether the current principal has a capability; frontend code must not reproduce the Role-to-Capability mapping.
 
-Managed assets use content capabilities: separate desktop/mobile Hero pools and
-the Pattern catalog live under Navigation content; Site Icon uses upload/clear
-inside the site workspace. Pattern selection is previewed locally with the same
-repeating CSS mask model as Nav Web before any upload. System / Cloud resources
+Managed assets use content capabilities: separate desktop/mobile Hero pools
+live under Navigation content; Site Icon uses upload/clear inside the site
+workspace. The background-pattern catalog and its CRUD routes are retired (#149);
+public page texture is bundled with Nav Web. System / Cloud resources
 requires `cloudops.read` for inspection and task history, `cloudops.manage` for
 COS-to-R2 repair and scoped CDN purges, and `cloudops.purge_all` for the Owner-only
 entire-EdgeOne-zone action. The main-host button and initially collapsed full-zone
@@ -56,7 +56,6 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 /nav/site-groups
 /nav/site-groups/:id/curation
 /nav/hero-assets
-/nav/background-patterns
 /nav/update-notices
 /nav/update-notices/new
 /nav/update-notices/:id

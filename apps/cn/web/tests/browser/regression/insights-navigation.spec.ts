@@ -19,14 +19,14 @@ test('Insights navigation retains its plain hierarchy and real Light/Dark public
   expect(html).toContain('生态观测')
   await expect(page.locator('.gf-nav__links [aria-current="page"]')).toHaveAttribute('href', '/insights')
   expect(await page.locator('.ecosystem-navigation').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
-  const pattern = await request.get('/web/background/gofurry-pattern.svg')
-  expect(pattern.status()).toBe(200); expect(pattern.headers()['content-type']).toContain('image/svg+xml')
+  const pattern = await request.get('/web/background/background.webp')
+  expect(pattern.status()).toBe(200); expect(pattern.headers()['content-type']).toContain('image/webp')
   const background = () => page.locator('.gf-public-background__pattern').evaluate(el => {
     const style = getComputedStyle(el)
-    return { color: style.backgroundColor, image: style.maskImage, opacity: Number(style.opacity), repeat: style.maskRepeat, size: style.maskSize }
+    return { mask: style.maskImage, image: style.backgroundImage, opacity: Number(style.opacity), repeat: style.backgroundRepeat, size: style.backgroundSize }
   })
-  expect(await background()).toMatchObject({ color: 'rgb(168, 135, 115)', opacity: .065, repeat: 'repeat', size: '160px 160px' })
-  expect((await background()).image).toContain('gofurry-pattern.svg')
+  expect(await background()).toMatchObject({ mask: 'none', opacity: .055, repeat: 'repeat', size: '512px 512px' })
+  expect((await background()).image).toContain('background.webp')
   const nav = await page.evaluate(() => {
     const primary = document.querySelector('.insights-primary-nav')!, domain = document.querySelector('.insights-domain-nav[data-domain="site"]')!
     const p = primary.getBoundingClientRect(), d = domain.getBoundingClientRect()
@@ -40,8 +40,8 @@ test('Insights navigation retains its plain hierarchy and real Light/Dark public
   for (const selector of ['.insights-primary-nav', '.insights-domain-nav']) await expect(page.locator(selector + ' [aria-current="page"]')).toHaveAttribute('href', '/insights/sites')
   await page.getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
   await expect(page.locator('html')).toHaveClass(/dark/)
-  await expect.poll(background).toMatchObject({ color: 'rgb(215, 193, 175)', opacity: .045, repeat: 'repeat', size: '160px 160px' })
-  expect((await background()).image).toContain('gofurry-pattern.svg')
+  await expect.poll(background).toMatchObject({ mask: 'none', opacity: .075, repeat: 'repeat', size: '512px 512px' })
+  expect((await background()).image).toContain('background.webp')
   runtime.assertQuiet()
 })
 

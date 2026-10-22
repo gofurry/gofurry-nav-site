@@ -40,7 +40,6 @@ func TestRealDevStorage(t *testing.T) {
 	}{
 		{"site-icon", "fixture.svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="5" fill="#765c43"/></svg>`)},
 		{"hero-desktop", "desktop.avif", avif}, {"hero-mobile", "mobile.avif", avif},
-		{"pattern", "pattern.svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M1 1h3v3H1z"/></svg>`)},
 	} {
 		t.Run(tc.kind, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -99,7 +98,7 @@ func TestRealDevStorage(t *testing.T) {
 	}
 }
 
-// Image GET alone cannot prove that a browser can use a cross-origin SVG mask.
+// Full-body CDN probes still require cross-origin reads.
 func TestRealDevStorageCORS(t *testing.T) {
 	config := os.Getenv("GOFURRY_ASSET_DEV_CONFIG")
 	if config == "" {
@@ -113,7 +112,7 @@ func TestRealDevStorageCORS(t *testing.T) {
 		if !strings.Contains(base, "assets-dev.") {
 			t.Fatal("requires development CDN")
 		}
-		for _, key := range []string{ProbeKey, "nav/patterns/e3f8e3ed70a58cfdf4625b74f1e19563.svg"} {
+		for _, key := range []string{ProbeKey} {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			req, _ := http.NewRequestWithContext(ctx, "GET", URL(base, key), nil)
 			req.Header.Set("Origin", "http://localhost:3000")

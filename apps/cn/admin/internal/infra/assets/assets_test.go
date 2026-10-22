@@ -1,7 +1,6 @@
 package assets
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -89,27 +88,12 @@ func TestObjectKeysAndFormats(t *testing.T) {
 		}
 	}
 }
-func TestSVGOriginalContent(t *testing.T) {
-	for _, body := range []string{
-		`<?xml version="1.0"?><!DOCTYPE svg><!-- exported drawing --><svg xmlns="http://www.w3.org/2000/svg"><style>.shape{fill:black}</style><filter id="blur"><feGaussianBlur stdDeviation="2"/></filter><path class="shape" filter="url(#blur)" d="M0 0h10v10z"/></svg>`,
-		`<svg onload="example()"><script/><image href="https://example.com/image.png"/><foreignObject/><animate attributeName="opacity"/></svg>`,
-		`<svg><!--` + strings.Repeat("drawing metadata ", 40000) + `--></svg>`,
-	} {
-		data := []byte(body)
-		o, err := NewObject("pattern", 0, "export.SVG", data)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(o.Data, data) || o.ContentType != "image/svg+xml" || !ValidKey(o.Key) {
-			t.Fatal("SVG bytes or publication format changed")
-		}
+
+func TestRetiredPatternPublication(t *testing.T) {
+	if _, err := NewObject("pattern", 0, "pattern.svg", []byte(`<svg/>`)); err == nil {
+		t.Fatal("retired catalog still publishes new pattern objects")
 	}
-	for _, data := range [][]byte{nil, make([]byte, MaxSize+1)} {
-		if _, _, err := Validate("pattern", "pattern.svg", data); err == nil {
-			t.Fatal("upload size limit bypassed")
-		}
-	}
-	if _, _, err := Validate("pattern", "photo.png", []byte("image")); err == nil {
-		t.Fatal("non-SVG pattern accepted")
+	if !ValidKey("nav/patterns/" + strings.Repeat("a", 32) + ".svg") {
+		t.Fatal("retirement must preserve CloudOps inspection of historical objects")
 	}
 }

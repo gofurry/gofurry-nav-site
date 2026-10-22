@@ -40,7 +40,6 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
       } }
       // Approved existing Home behavior: null saying triggers this focused fetch.
       if (url.pathname === '/api/v2/nav/home/saying') return { data: { schema_version: 1, saying: null } }
-      if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: { schema_version: 1, patterns: [] } }
       return { status: 500 }
     })
     try { await use(app) }
@@ -55,7 +54,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     let home = false
     let weatherExpected = false
     let locale = 'zh'
-    let modeCatalogExpected = false
+    let modeOpened = false
     const upstreamStart = shellApp.requests.length
     page.on('requestfailed', request => failed.push(`${request.url()}: ${request.failure()?.errorText}`))
     page.on('request', request => {
@@ -85,13 +84,11 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     const assertQuiet = () => {
       const upstream = shellApp.requests.slice(upstreamStart)
       const expected = home ? ['/api/v2/nav/home', '/api/v2/nav/home/saying'] : []
-      if (modeCatalogExpected) expected.push('/api/v2/nav/appearance/patterns')
       expect(upstream.map(url => url.pathname), 'Only explicitly reached Home/Mode integrations may call upstream').toEqual(expected)
       expect(browserAPI, 'Home data must arrive in the SSR payload, never refetch during hydration')
         .toEqual(expected.filter(path => path !== '/api/v2/nav/home'))
       for (const url of upstream) {
-        if (url.pathname === '/api/v2/nav/appearance/patterns') expect(url.search).toBe('')
-        else expect(url.searchParams.get('lang')).toBe(locale)
+        expect(url.searchParams.get('lang')).toBe(locale)
       }
       expect(isolatedWeather, 'Only the explicitly reached lazy Home weather frame is isolated').toEqual(weatherExpected ? [weatherURL] : [])
       expect(external, 'No external origins may be requested').toEqual([])
@@ -209,14 +206,13 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
         },
         async openBottomMode() {
           expect(home).toBe(false)
-          expect(modeCatalogExpected).toBe(false)
+          expect(modeOpened).toBe(false)
           assertQuiet()
-          modeCatalogExpected = true
+          modeOpened = true
           await bottomTabs.getByRole('button', { name: /^(模式|Mode)$/ }).click()
           await expect(page.locator('.gf-preferences-modal')).toBeVisible()
-          // A real Modal mount eagerly initializes its Background Editor.
-          // Permit exactly that one catalog only after the real Mode action.
-          await expect.poll(() => shellApp.requests.slice(upstreamStart).length).toBe(1)
+          // Opening Preferences is local; no background catalog remains.
+          expect(shellApp.requests.slice(upstreamStart)).toEqual([])
           assertQuiet()
         },
         async scrollTo(top) {
@@ -270,7 +266,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
       assertQuiet()
     } finally {
       await testInfo.attach('nav-shell-requests.json', {
-        body: JSON.stringify({ upstream: shellApp.requests.slice(upstreamStart).map(url => url.href), browserAPI, modeCatalogExpected, isolatedWeather, external, failed, errors }),
+        body: JSON.stringify({ upstream: shellApp.requests.slice(upstreamStart).map(url => url.href), browserAPI, modeOpened, isolatedWeather, external, failed, errors }),
         contentType: 'application/json',
       })
       if (testInfo.status !== testInfo.expectedStatus) {

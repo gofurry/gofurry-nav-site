@@ -12,7 +12,6 @@ const SiteListPage = lazy(() => import('../features/sites/site-pages').then((mod
 const SiteWorkspacePage = lazy(() => import('../features/sites/site-pages').then((module) => ({ default: module.SiteWorkspacePage })))
 const GroupCurationPage = lazy(() => import('../features/sites/group-curation-page').then((module) => ({ default: module.GroupCurationPage })))
 const HeroAssetsPage = lazy(() => import('../features/assets/asset-pages').then((module) => ({ default: module.HeroAssetsPage })))
-const BackgroundPatternsPage = lazy(() => import('../features/assets/asset-pages').then((module) => ({ default: module.BackgroundPatternsPage })))
 const GameListPage = lazy(() => import('../features/games/game-pages').then((module) => ({ default: module.GameListPage })))
 const GameWorkspacePage = lazy(() => import('../features/games/game-pages').then((module) => ({ default: module.GameWorkspacePage })))
 const CollectionListPage = lazy(() => import('../features/game-collections/collection-list-page').then(module => ({ default: module.CollectionListPage })))
@@ -46,7 +45,6 @@ export const router = createBrowserRouter([
           { path: 'nav/sites/:id', element: <SiteWorkspacePage /> },
           { path: 'nav/site-groups/:id/curation', element: <GroupCurationPage /> },
           { path: 'nav/hero-assets', element: <HeroAssetsPage /> },
-          { path: 'nav/background-patterns', element: <BackgroundPatternsPage /> },
           { path: 'nav/update-notices', element: <ReleaseNoteListPage /> },
           { path: 'nav/update-notices/new', element: <ReleaseNoteEditorPage /> },
           { path: 'nav/update-notices/:id', element: <ReleaseNoteEditorPage /> },

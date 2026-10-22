@@ -255,9 +255,9 @@ const globalStyles = readFileSync(new URL('../app/assets/styles/tokens.less', im
 const staticStyles = readFileSync(new URL('../app/assets/styles/pages/static.less', import.meta.url), 'utf8')
 assert(!globalStyles.includes('--gf-bg-page') && !staticStyles.includes('--gf-bg-page'), 'retired static-page canvas fallback returned')
 const shellStyles = readFileSync(new URL('../app/assets/styles/components/shell.less', import.meta.url), 'utf8')
-assert(backgroundSource.includes('ref(defaultBackgroundPreference())') && backgroundSource.includes('mask-image: var(--gf-page-pattern)'), 'default layout lost its SSR default mask-based public pattern')
-assert(globalStyles.includes("--gf-page-pattern: url('/web/background/gofurry-pattern.svg')") && globalStyles.includes('--gf-page-pattern-size: 160px 160px'), 'default public pattern contract drifted')
-assert(!globalStyles.includes('--gf-page-pattern: none') && existsSync(new URL('../public/web/background/gofurry-pattern.svg', import.meta.url)), 'public pattern asset is missing or disabled')
+assert(backgroundSource.includes('data-pattern-status="default"') && backgroundSource.includes('background-image: var(--gf-page-pattern)') && backgroundSource.includes('background-repeat: repeat') && !backgroundSource.includes('<script') && !backgroundSource.includes('mask-image') && !globalStyles.includes('--gf-page-pattern-color'), 'static SSR RGB page texture contract drifted')
+assert(globalStyles.includes("--gf-page-pattern: url('/web/background/background.webp')") && globalStyles.includes('--gf-page-pattern-size: 512px 512px'), 'default public pattern contract drifted')
+assert(!globalStyles.includes('--gf-page-pattern: none') && existsSync(new URL('../public/web/background/background.webp', import.meta.url)), 'public pattern asset is missing or disabled')
 for (const root of ['.nav-home-page', '.nav-content-shell', '.games-page', '.games-search-page', '.gf-static-page', '.lottery-page', '.lottery-activation-page']) {
   assert(shellStyles.includes(root), `${root} can hide the layout-owned public background`)
 }

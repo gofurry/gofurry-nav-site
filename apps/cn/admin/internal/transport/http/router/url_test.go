@@ -52,6 +52,9 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := string(data)
+	if strings.Contains(source, `"/background-patterns`) {
+		t.Fatal("retired background catalog route remains registered")
+	}
 	expected := []string{
 		`root.Get("/ideas", authmw.Require(authorization.CollaborationRead)`,
 		`root.Post("/ideas/batch-preview", authmw.Require(authorization.CollaborationRead)`,
@@ -74,9 +77,6 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 		`root.Get("/hero-assets", authmw.Require(authorization.ContentRead)`,
 		`root.Post("/hero-assets", authmw.Require(authorization.ContentWrite)`,
 		`root.Put("/hero-assets/:id", authmw.Require(authorization.ContentWrite)`,
-		`root.Get("/background-patterns", authmw.Require(authorization.ContentRead)`,
-		`root.Post("/background-patterns/:id/file", authmw.Require(authorization.ContentWrite)`,
-		`root.Delete("/background-patterns/:id", authmw.Require(authorization.ContentWrite)`,
 		`root.Get("/site-groups/:id/curation", authmw.Require(authorization.ContentRead)`,
 		`root.Put("/site-groups/:id/curation", authmw.Require(authorization.ContentWrite)`,
 		`root.Post("/sites", authmw.Require(authorization.ContentWrite)`,

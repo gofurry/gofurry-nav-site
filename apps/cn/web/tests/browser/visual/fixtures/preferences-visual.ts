@@ -6,7 +6,7 @@ import { STEAM_PROBE_PATHS } from '../../../../app/utils/steamAssetRouting'
 type PreferencesVisualOptions = {
   theme: 'light' | 'dark'
   viewport: 'desktop' | 'mobile'
-  page: 'home' | 'background' | 'routing'
+  page: 'home' | 'routing'
 }
 
 // 2026-09-20 00:00:00 UTC. Only Routing's browser Date.now/diagnostics use
@@ -38,7 +38,7 @@ export const test = base.extend<{ mountPreferencesVisual: MountPreferencesVisual
       await expect(modal).toBeVisible()
       expect(await backdrop.evaluate(el => el.closest('#__nuxt'))).toBeNull()
 
-      const index = ['home', 'background', 'routing'].indexOf(options.page)
+      const index = ['home', 'routing'].indexOf(options.page)
       const tab = modal.getByRole('tab').nth(index)
       const panels = modal.locator('.preferences-pages > .preferences-page')
       const panel = panels.nth(index)
@@ -48,13 +48,10 @@ export const test = base.extend<{ mountPreferencesVisual: MountPreferencesVisual
       await expect.poll(() => modal.locator('.preferences-pages').evaluate((el, index) =>
         Math.abs(el.scrollLeft - index * el.clientWidth), index)).toBeLessThanOrEqual(1)
 
-      // Reach only the default real states, not Catalog/Local/Pattern inventories.
+      // Reach only the default real states, not Hero Catalog/Local inventories.
       if (options.page === 'home') {
         await expect(panel.locator('#quick-access-toggle')).toHaveAttribute('aria-pressed', 'true')
         await expect(panel.getByRole('button', { name: '云端随机', exact: true })).toHaveAttribute('aria-pressed', 'true')
-      } else if (options.page === 'background') {
-        await expect(panel.getByRole('button', { name: '默认图案', exact: true })).toHaveAttribute('aria-pressed', 'true')
-        await expect(panel.locator('.background-preferences__preview')).toBeVisible()
       } else {
         await expect(panel.locator('.resource-route__measurements')).toHaveCount(2)
         await expect(panel.locator('.resource-route__measurements').first()).toContainText('10 ms')
@@ -110,7 +107,7 @@ export const test = base.extend<{ mountPreferencesVisual: MountPreferencesVisual
         const widths = await target.evaluate(el => ({ name: el.className, scroll: el.scrollWidth, client: el.clientWidth }))
         expect(widths.scroll, `${widths.name} must not overflow horizontally`).toBeLessThanOrEqual(widths.client + 1)
       }
-      // The carousel intentionally has three pages of scrollable width; all
+      // The carousel intentionally has two pages of scrollable width; all
       // immediate frame boxes still have to fit inside the Modal.
       for (const child of await modal.locator(':scope > *').all()) {
         const box = await child.boundingBox()

@@ -60,7 +60,6 @@ type State = {
   upstream: URL[]
   upstreamEnd?: number
   directoryAllowed: boolean
-  preferencesAllowed: boolean
   expectedViews: Set<string>
   expectedPopups: Set<string>
   browserAPI: RequestEvidence[]
@@ -118,7 +117,6 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
       state.upstream.push(url)
       if (url.pathname === '/api/v2/nav/home' && url.search === `?lang=${state.lang}`) return { data: state.data.home }
       if (state.directoryAllowed && url.pathname === '/api/v2/nav/sites/directory' && url.search === `?lang=${state.lang}`) return { data: state.data.directory }
-      if (state.preferencesAllowed && url.pathname === '/api/v2/nav/appearance/patterns' && !url.search) return { data: { schema_version: 1, patterns: [] } }
       for (const id of state.expectedViews) {
         if (url.pathname === `/api/v2/nav/sites/${id}/view` && !url.search) return { data: { site_id: Number(id), view_count: 4321 } }
       }
@@ -173,7 +171,7 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
           previous.scene.assertQuiet()
           previous.state.upstreamEnd = app.requests.length
         }
-        const state: State = { lang, data: scenarioData(), upstream: [], directoryAllowed: false, preferencesAllowed: false,
+        const state: State = { lang, data: scenarioData(), upstream: [], directoryAllowed: false,
           expectedViews: new Set(), expectedPopups: new Set(), browserAPI: [], assets: [],
           weather: [], popups: [], external: [], failures: [], pages: [] }
         if (largeDirectory) state.data.directory.push(...Array.from({ length: 8 }, (_, index) => site(701 + index, `Wolf Resource ${index + 1}`)))
@@ -266,12 +264,10 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
           expect(state.upstream.map(url => url.pathname + url.search)).toEqual([
             `/api/v2/nav/home?lang=${lang}`,
             ...(state.directoryAllowed ? [`/api/v2/nav/sites/directory?lang=${lang}`] : []),
-            ...(state.preferencesAllowed ? ['/api/v2/nav/appearance/patterns'] : []),
             ...[...state.expectedViews].map(id => `/api/v2/nav/sites/${id}/view`),
           ])
           expect(state.browserAPI).toEqual([
             ...(state.directoryAllowed ? [{ method: 'GET', path: `/api/v2/nav/sites/directory?lang=${lang}` }] : []),
-            ...(state.preferencesAllowed ? [{ method: 'GET', path: '/api/v2/nav/appearance/patterns' }] : []),
             ...[...state.expectedViews].map(id => ({ method: 'POST', path: `/api/v2/nav/sites/${id}/view` })),
           ])
           expect(state.weather).toEqual(width >= 640 ? [weatherURL] : [])
@@ -325,9 +321,8 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
             await expect.poll(() => scene.directoryCount()).toBe(1)
           },
           async openPreferences() {
-            state.preferencesAllowed = true
             await page.locator('.gf-nav__mode-button').click()
-            await expect.poll(() => state.upstream.filter(url => url.pathname === '/api/v2/nav/appearance/patterns').length).toBe(1)
+            await expect(page.locator('.gf-preferences-modal')).toBeVisible()
           },
           async hoverTopCard() {
             const target = card(state.data.community.name)

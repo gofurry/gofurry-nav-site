@@ -69,11 +69,6 @@ func TestRealDevManagedAssetAPI(t *testing.T) {
 	app.Put("/hero/:id", api.UpdateHeroAsset)
 	app.Post("/hero/:id/file", api.ReplaceHeroAssetFile)
 	app.Delete("/hero/:id", api.DeleteHeroAsset)
-	app.Post("/pattern", api.CreateBackgroundPattern)
-	app.Get("/pattern/:id", api.GetBackgroundPattern)
-	app.Put("/pattern/:id", api.UpdateBackgroundPattern)
-	app.Post("/pattern/:id/file", api.ReplaceBackgroundPatternFile)
-	app.Delete("/pattern/:id", api.DeleteBackgroundPattern)
 	app.Post("/site/:id/icon", api.ReplaceSiteIcon)
 	app.Delete("/site/:id/icon", api.ClearSiteIcon)
 	app.Put("/site/:id", api.UpdateSite)
@@ -160,20 +155,6 @@ func TestRealDevManagedAssetAPI(t *testing.T) {
 		}
 	}
 	pattern := []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M1 1h3v3H1z"/></svg>`)
-	publication := upload("/pattern", "pattern.svg", pattern, map[string]string{"name": "[dev acceptance] Pattern", "name_en": "Dev acceptance", "light_color": "#123456", "dark_color": "#abcdef", "light_opacity": "0.1", "dark_opacity": "0.2", "default_size_px": "96", "enabled": "false", "sort_order": "999999"}, true)
-	patternID := publication.Item.(map[string]any)["id"].(string)
-	defer jsonCall("DELETE", "/pattern/"+patternID, nil, true)
-	upload("/pattern/"+patternID+"/file", "export.svg", []byte(`<?xml version="1.0"?><!DOCTYPE svg><!-- exported drawing --><svg xmlns="http://www.w3.org/2000/svg"><style>path{fill:black}</style><path d="M0 0h10v10z"/></svg>`), nil, true)
-	upload("/pattern/"+patternID+"/file", "pattern.svg", pattern, nil, true)
-	patternUpdate := patternPayload{Name: "[dev acceptance] Pattern", NameEn: "Dev acceptance", LightColor: "#111111", DarkColor: "#eeeeee", LightOpacity: 0.25, DarkOpacity: 0.5, DefaultSizePx: 128, Enabled: false, SortOrder: 999999}
-	jsonCall("PUT", "/pattern/"+patternID, patternUpdate, true)
-	var got patternDTO
-	if err := json.Unmarshal(jsonCall("GET", "/pattern/"+patternID, nil, true), &got); err != nil {
-		t.Fatal(err)
-	}
-	if got.DefaultSizePx != 128 || got.LightOpacity != 0.25 {
-		t.Fatal("pattern metadata lost")
-	}
 	site, storeErr := api.store.createSite(ctx, audit.SystemMeta("managed-assets-dev-acceptance"), models.SitePayload{Name: "[dev acceptance] Icon", NameEn: "Dev acceptance", Nsfw: "0", Welfare: "0"})
 	if storeErr != nil {
 		t.Fatal(storeErr)
@@ -209,11 +190,11 @@ func TestRealDevManagedAssetAPI(t *testing.T) {
 	}
 	closed.Close()
 	api.store.audit = audit.New(closed)
-	jsonCall("PUT", "/pattern/"+patternID, patternPayload{Name: "should roll back", NameEn: "unchanged", LightColor: "#111111", DarkColor: "#eeeeee", LightOpacity: 0.1, DarkOpacity: 0.1, DefaultSizePx: 64}, false)
+	upload(sitePath+"/icon", "Icon.SVG", pattern, nil, false)
 	api.store.audit = audit.New(pools.Admin)
-	current, e := api.store.q.GetBackgroundPattern(ctx, got.ID)
-	if e != nil || current.Name != patternUpdate.Name {
-		t.Fatal("audit failure did not roll back")
+	current, e := api.store.q.GetSite(ctx, site.ID)
+	if e != nil || current.Icon != nil {
+		t.Fatal("audit failure did not roll back icon replacement")
 	}
 	api.assetStorage = &assets.Service{Primary: storage.Primary, Mirror: unavailableAssetStore{}}
 	expectedMirror = "failed"
@@ -234,5 +215,5 @@ func TestRealDevManagedAssetAPI(t *testing.T) {
 		t.Fatal("primary failure published a database row")
 	}
 	api.assetStorage = storage
-	t.Log(fmt.Sprintf("real API acceptance passed: two hero pools, pattern metadata, site icon replace/clear, immutable objects, audit rollback and provider outage behavior (site %d)", site.ID))
+	t.Log(fmt.Sprintf("real API acceptance passed: two hero pools, site icon replace/clear, immutable objects, audit rollback and provider outage behavior (site %d)", site.ID))
 }

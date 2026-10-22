@@ -14,14 +14,12 @@
   --gf-font-sans: "Manrope Variable", "Noto Sans SC Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --gf-font-mono: "Cascadia Mono", "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", ui-monospace, monospace;
 
-  /* Page & Canvas: layout-owned page background and default public pattern.
-   * Consumers, including local/server preference overrides, keep this shared base.
-   */
+  /* Page & Canvas: one bundled RGB/alpha texture; opacity belongs only to
+     the decorative layer, never to content or the canvas beneath it. */
   --gf-page-background: #f2e3d0;
-  --gf-page-pattern: url('/web/background/gofurry-pattern.svg');
-  --gf-page-pattern-color: #A88773;
-  --gf-page-pattern-opacity: 0.065;
-  --gf-page-pattern-size: 160px 160px;
+  --gf-page-pattern: url('/web/background/background.webp');
+  --gf-page-pattern-opacity: 0.055;
+  --gf-page-pattern-size: 512px 512px;
 
   /* Surface: reusable content surfaces; strong increases separation and hover
    * expresses interactive emphasis. Form controls retain their own semantics.
@@ -104,8 +102,7 @@
 html.dark {
   /* Page & Canvas */
   --gf-page-background: #0b1728;
-  --gf-page-pattern-color: #D7C1AF;
-  --gf-page-pattern-opacity: 0.045;
+  --gf-page-pattern-opacity: 0.075;
 
   /* Surface */
   --gf-surface: rgba(226, 232, 240, 0.08);

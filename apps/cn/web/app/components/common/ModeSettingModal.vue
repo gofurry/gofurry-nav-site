@@ -79,9 +79,6 @@
 
           </div>
           <div :id="`${panelId}-panel-1`" role="tabpanel" :aria-labelledby="`${panelId}-tab-1`" :inert="activeTab !== 1" class="preferences-page">
-            <BackgroundPreferencesEditor ref="backgroundEditor" />
-          </div>
-          <div :id="`${panelId}-panel-2`" role="tabpanel" :aria-labelledby="`${panelId}-tab-2`" :inert="activeTab !== 2" class="preferences-page">
             <ResourceRoutingPreferencesEditor ref="routingEditor" />
           </div>
         </div>
@@ -94,7 +91,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, useId, watch } from 'vue'
 import HeroPreferencesEditor from './HeroPreferencesEditor.vue'
-import BackgroundPreferencesEditor from './BackgroundPreferencesEditor.vue'
 import ResourceRoutingPreferencesEditor from './ResourceRoutingPreferencesEditor.vue'
 import { i18n } from '@/main'
 import { useReducedMotion } from '@/composables/useReducedMotion'
@@ -173,7 +169,7 @@ onBeforeUnmount(() => {
 })
 const activeTab = ref(0)
 const pages = ref<HTMLElement | null>(null)
-const tabs = computed(() => [t('navbar.homePreferences'), t('navbar.pageBackground'), t('resourceRouting.title')])
+const tabs = computed(() => [t('navbar.homePreferences'), t('resourceRouting.title')])
 function selectTab(index: number) {
   activeTab.value = index
   const element = pages.value
@@ -197,7 +193,6 @@ function tabKeydown(event: KeyboardEvent, index: number) {
   document.getElementById(`${panelId}-tab-${next}`)?.focus()
 }
 const localMode = ref('')
-const backgroundEditor = ref<InstanceType<typeof BackgroundPreferencesEditor> | null>(null)
 const routingEditor = ref<InstanceType<typeof ResourceRoutingPreferencesEditor> | null>(null)
 const heroEditor = ref<InstanceType<typeof HeroPreferencesEditor> | null>(null)
 const showQuickAccessLocal = ref(true)
@@ -233,7 +228,6 @@ onMounted(() => {
 const save = async () => {
   if (!props.show) return
   if (heroEditor.value && !heroEditor.value.validate()) { selectTab(0); return }
-  if (backgroundEditor.value && !(await backgroundEditor.value.save())) { selectTab(1); return }
   localMode.value = localMode.value.trim().slice(0, 32)
 
   if (heroEditor.value && !(await heroEditor.value.save())) { selectTab(0); return }

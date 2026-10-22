@@ -7,20 +7,7 @@ package navsqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
-
-const countBackgroundPatterns = `-- name: CountBackgroundPatterns :one
-SELECT COUNT(*)::bigint FROM gfn_background_pattern WHERE NOT deleted
-`
-
-func (q *Queries) CountBackgroundPatterns(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countBackgroundPatterns)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
 
 const countHeroAssets = `-- name: CountHeroAssets :one
 SELECT COUNT(*)::bigint FROM gfn_home_hero_asset WHERE NOT deleted AND variant=$1
@@ -31,78 +18,6 @@ func (q *Queries) CountHeroAssets(ctx context.Context, variant string) (int64, e
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
-}
-
-const createBackgroundPattern = `-- name: CreateBackgroundPattern :one
-INSERT INTO gfn_background_pattern (id,name,name_en,object_key,light_color,dark_color,light_opacity,dark_opacity,default_size_px,enabled,sort_order)
-VALUES ($1,$2,$3,$4,$5,$6,$7::double precision,$8::double precision,$9,$10,$11) RETURNING id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px,enabled,sort_order,deleted,deleted_at,create_time,update_time
-`
-
-type CreateBackgroundPatternParams struct {
-	ID            int64   `json:"id"`
-	Name          string  `json:"name"`
-	NameEn        string  `json:"name_en"`
-	ObjectKey     string  `json:"object_key"`
-	LightColor    string  `json:"light_color"`
-	DarkColor     string  `json:"dark_color"`
-	LightOpacity  float64 `json:"light_opacity"`
-	DarkOpacity   float64 `json:"dark_opacity"`
-	DefaultSizePx int32   `json:"default_size_px"`
-	Enabled       bool    `json:"enabled"`
-	SortOrder     int64   `json:"sort_order"`
-}
-
-type CreateBackgroundPatternRow struct {
-	ID            int64              `json:"id"`
-	Name          string             `json:"name"`
-	NameEn        string             `json:"name_en"`
-	ObjectKey     string             `json:"object_key"`
-	LightColor    string             `json:"light_color"`
-	DarkColor     string             `json:"dark_color"`
-	LightOpacity  float64            `json:"light_opacity"`
-	DarkOpacity   float64            `json:"dark_opacity"`
-	DefaultSizePx int32              `json:"default_size_px"`
-	Enabled       bool               `json:"enabled"`
-	SortOrder     int64              `json:"sort_order"`
-	Deleted       bool               `json:"deleted"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
-	CreateTime    pgtype.Timestamp   `json:"create_time"`
-	UpdateTime    pgtype.Timestamp   `json:"update_time"`
-}
-
-func (q *Queries) CreateBackgroundPattern(ctx context.Context, arg CreateBackgroundPatternParams) (CreateBackgroundPatternRow, error) {
-	row := q.db.QueryRow(ctx, createBackgroundPattern,
-		arg.ID,
-		arg.Name,
-		arg.NameEn,
-		arg.ObjectKey,
-		arg.LightColor,
-		arg.DarkColor,
-		arg.LightOpacity,
-		arg.DarkOpacity,
-		arg.DefaultSizePx,
-		arg.Enabled,
-		arg.SortOrder,
-	)
-	var i CreateBackgroundPatternRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.NameEn,
-		&i.ObjectKey,
-		&i.LightColor,
-		&i.DarkColor,
-		&i.LightOpacity,
-		&i.DarkOpacity,
-		&i.DefaultSizePx,
-		&i.Enabled,
-		&i.SortOrder,
-		&i.Deleted,
-		&i.DeletedAt,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
 }
 
 const createHeroAsset = `-- name: CreateHeroAsset :one
@@ -141,19 +56,6 @@ func (q *Queries) CreateHeroAsset(ctx context.Context, arg CreateHeroAssetParams
 	return i, err
 }
 
-const deleteBackgroundPattern = `-- name: DeleteBackgroundPattern :execrows
-UPDATE gfn_background_pattern SET deleted=true,deleted_at=NOW(),update_time=NOW()::timestamp(0)
-WHERE id=$1 AND NOT deleted
-`
-
-func (q *Queries) DeleteBackgroundPattern(ctx context.Context, id int64) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteBackgroundPattern, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const deleteHeroAsset = `-- name: DeleteHeroAsset :execrows
 UPDATE gfn_home_hero_asset SET deleted=true,deleted_at=NOW(),update_time=NOW()::timestamp(0)
 WHERE id=$1 AND NOT deleted
@@ -165,51 +67,6 @@ func (q *Queries) DeleteHeroAsset(ctx context.Context, id int64) (int64, error) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const getBackgroundPattern = `-- name: GetBackgroundPattern :one
-SELECT id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px,enabled,sort_order,deleted,deleted_at,create_time,update_time FROM gfn_background_pattern WHERE id=$1 AND NOT deleted
-`
-
-type GetBackgroundPatternRow struct {
-	ID            int64              `json:"id"`
-	Name          string             `json:"name"`
-	NameEn        string             `json:"name_en"`
-	ObjectKey     string             `json:"object_key"`
-	LightColor    string             `json:"light_color"`
-	DarkColor     string             `json:"dark_color"`
-	LightOpacity  float64            `json:"light_opacity"`
-	DarkOpacity   float64            `json:"dark_opacity"`
-	DefaultSizePx int32              `json:"default_size_px"`
-	Enabled       bool               `json:"enabled"`
-	SortOrder     int64              `json:"sort_order"`
-	Deleted       bool               `json:"deleted"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
-	CreateTime    pgtype.Timestamp   `json:"create_time"`
-	UpdateTime    pgtype.Timestamp   `json:"update_time"`
-}
-
-func (q *Queries) GetBackgroundPattern(ctx context.Context, id int64) (GetBackgroundPatternRow, error) {
-	row := q.db.QueryRow(ctx, getBackgroundPattern, id)
-	var i GetBackgroundPatternRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.NameEn,
-		&i.ObjectKey,
-		&i.LightColor,
-		&i.DarkColor,
-		&i.LightOpacity,
-		&i.DarkOpacity,
-		&i.DefaultSizePx,
-		&i.Enabled,
-		&i.SortOrder,
-		&i.Deleted,
-		&i.DeletedAt,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
 }
 
 const getHeroAsset = `-- name: GetHeroAsset :one
@@ -231,70 +88,6 @@ func (q *Queries) GetHeroAsset(ctx context.Context, id int64) (GfnHomeHeroAsset,
 		&i.UpdateTime,
 	)
 	return i, err
-}
-
-const listBackgroundPatterns = `-- name: ListBackgroundPatterns :many
-SELECT id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px,enabled,sort_order,deleted,deleted_at,create_time,update_time FROM gfn_background_pattern WHERE NOT deleted
-ORDER BY sort_order,id LIMIT $2 OFFSET $1
-`
-
-type ListBackgroundPatternsParams struct {
-	RowOffset int32 `json:"row_offset"`
-	RowLimit  int32 `json:"row_limit"`
-}
-
-type ListBackgroundPatternsRow struct {
-	ID            int64              `json:"id"`
-	Name          string             `json:"name"`
-	NameEn        string             `json:"name_en"`
-	ObjectKey     string             `json:"object_key"`
-	LightColor    string             `json:"light_color"`
-	DarkColor     string             `json:"dark_color"`
-	LightOpacity  float64            `json:"light_opacity"`
-	DarkOpacity   float64            `json:"dark_opacity"`
-	DefaultSizePx int32              `json:"default_size_px"`
-	Enabled       bool               `json:"enabled"`
-	SortOrder     int64              `json:"sort_order"`
-	Deleted       bool               `json:"deleted"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
-	CreateTime    pgtype.Timestamp   `json:"create_time"`
-	UpdateTime    pgtype.Timestamp   `json:"update_time"`
-}
-
-func (q *Queries) ListBackgroundPatterns(ctx context.Context, arg ListBackgroundPatternsParams) ([]ListBackgroundPatternsRow, error) {
-	rows, err := q.db.Query(ctx, listBackgroundPatterns, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListBackgroundPatternsRow{}
-	for rows.Next() {
-		var i ListBackgroundPatternsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.NameEn,
-			&i.ObjectKey,
-			&i.LightColor,
-			&i.DarkColor,
-			&i.LightOpacity,
-			&i.DarkOpacity,
-			&i.DefaultSizePx,
-			&i.Enabled,
-			&i.SortOrder,
-			&i.Deleted,
-			&i.DeletedAt,
-			&i.CreateTime,
-			&i.UpdateTime,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listHeroAssets = `-- name: ListHeroAssets :many
@@ -339,51 +132,6 @@ func (q *Queries) ListHeroAssets(ctx context.Context, arg ListHeroAssetsParams) 
 	return items, nil
 }
 
-const lockBackgroundPattern = `-- name: LockBackgroundPattern :one
-SELECT id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px,enabled,sort_order,deleted,deleted_at,create_time,update_time FROM gfn_background_pattern WHERE id=$1 AND NOT deleted FOR UPDATE
-`
-
-type LockBackgroundPatternRow struct {
-	ID            int64              `json:"id"`
-	Name          string             `json:"name"`
-	NameEn        string             `json:"name_en"`
-	ObjectKey     string             `json:"object_key"`
-	LightColor    string             `json:"light_color"`
-	DarkColor     string             `json:"dark_color"`
-	LightOpacity  float64            `json:"light_opacity"`
-	DarkOpacity   float64            `json:"dark_opacity"`
-	DefaultSizePx int32              `json:"default_size_px"`
-	Enabled       bool               `json:"enabled"`
-	SortOrder     int64              `json:"sort_order"`
-	Deleted       bool               `json:"deleted"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
-	CreateTime    pgtype.Timestamp   `json:"create_time"`
-	UpdateTime    pgtype.Timestamp   `json:"update_time"`
-}
-
-func (q *Queries) LockBackgroundPattern(ctx context.Context, id int64) (LockBackgroundPatternRow, error) {
-	row := q.db.QueryRow(ctx, lockBackgroundPattern, id)
-	var i LockBackgroundPatternRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.NameEn,
-		&i.ObjectKey,
-		&i.LightColor,
-		&i.DarkColor,
-		&i.LightOpacity,
-		&i.DarkOpacity,
-		&i.DefaultSizePx,
-		&i.Enabled,
-		&i.SortOrder,
-		&i.Deleted,
-		&i.DeletedAt,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
-}
-
 const lockHeroAsset = `-- name: LockHeroAsset :one
 SELECT id,variant,name,object_key,enabled,deleted,deleted_at,create_time,update_time FROM gfn_home_hero_asset WHERE id=$1 AND NOT deleted FOR UPDATE
 `
@@ -421,18 +169,6 @@ func (q *Queries) LockSiteIcon(ctx context.Context, id int64) (LockSiteIconRow, 
 	return i, err
 }
 
-const nextBackgroundPatternID = `-- name: NextBackgroundPatternID :one
-WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_background_pattern')::bigint))
-SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfn_background_pattern CROSS JOIN lock_row
-`
-
-func (q *Queries) NextBackgroundPatternID(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, nextBackgroundPatternID)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const nextHeroAssetID = `-- name: NextHeroAssetID :one
 WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_home_hero_asset')::bigint))
 SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfn_home_hero_asset CROSS JOIN lock_row
@@ -443,24 +179,6 @@ func (q *Queries) NextHeroAssetID(ctx context.Context) (int64, error) {
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
-}
-
-const replaceBackgroundPatternFile = `-- name: ReplaceBackgroundPatternFile :execrows
-UPDATE gfn_background_pattern SET object_key=$1,update_time=NOW()::timestamp(0)
-WHERE id=$2 AND NOT deleted
-`
-
-type ReplaceBackgroundPatternFileParams struct {
-	ObjectKey string `json:"object_key"`
-	ID        int64  `json:"id"`
-}
-
-func (q *Queries) ReplaceBackgroundPatternFile(ctx context.Context, arg ReplaceBackgroundPatternFileParams) (int64, error) {
-	result, err := q.db.Exec(ctx, replaceBackgroundPatternFile, arg.ObjectKey, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }
 
 const replaceHeroAssetFile = `-- name: ReplaceHeroAssetFile :execrows
@@ -493,43 +211,6 @@ type ReplaceSiteIconParams struct {
 
 func (q *Queries) ReplaceSiteIcon(ctx context.Context, arg ReplaceSiteIconParams) (int64, error) {
 	result, err := q.db.Exec(ctx, replaceSiteIcon, arg.Icon, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const updateBackgroundPattern = `-- name: UpdateBackgroundPattern :execrows
-UPDATE gfn_background_pattern SET name=$1,name_en=$2,light_color=$3,dark_color=$4,light_opacity=$5::double precision,dark_opacity=$6::double precision,default_size_px=$7,enabled=$8,sort_order=$9,update_time=NOW()::timestamp(0)
-WHERE id=$10 AND NOT deleted
-`
-
-type UpdateBackgroundPatternParams struct {
-	Name          string  `json:"name"`
-	NameEn        string  `json:"name_en"`
-	LightColor    string  `json:"light_color"`
-	DarkColor     string  `json:"dark_color"`
-	LightOpacity  float64 `json:"light_opacity"`
-	DarkOpacity   float64 `json:"dark_opacity"`
-	DefaultSizePx int32   `json:"default_size_px"`
-	Enabled       bool    `json:"enabled"`
-	SortOrder     int64   `json:"sort_order"`
-	ID            int64   `json:"id"`
-}
-
-func (q *Queries) UpdateBackgroundPattern(ctx context.Context, arg UpdateBackgroundPatternParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateBackgroundPattern,
-		arg.Name,
-		arg.NameEn,
-		arg.LightColor,
-		arg.DarkColor,
-		arg.LightOpacity,
-		arg.DarkOpacity,
-		arg.DefaultSizePx,
-		arg.Enabled,
-		arg.SortOrder,
-		arg.ID,
-	)
 	if err != nil {
 		return 0, err
 	}

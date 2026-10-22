@@ -63,12 +63,6 @@ func Validate(kind, filename string, data []byte) (string, string, error) {
 			return "", "", errors.New("hero must be AVIF")
 		}
 		return "image/avif", ".avif", nil
-	case "pattern":
-		if !strings.EqualFold(path.Ext(filename), ".svg") {
-			return "", "", errors.New("pattern must be an SVG file")
-		}
-		// Preserve administrator-supplied SVG bytes without content filtering.
-		return "image/svg+xml", ".svg", nil
 	}
 	return "", "", errors.New("unsupported asset kind")
 }

@@ -7,7 +7,7 @@ for (const viewport of ['desktop', 'mobile'] as const) {
       await expect(backdrop).toHaveScreenshot(`preferences-home-${theme}-${viewport}.png`)
     })
   }
-  for (const page of ['background', 'routing'] as const) {
+  for (const page of ['routing'] as const) {
     test(`real Preferences ${page}: light / ${viewport}`, async ({ mountPreferencesVisual }) => {
       const backdrop = await mountPreferencesVisual({ page, theme: 'light', viewport })
       await expect(backdrop).toHaveScreenshot(`preferences-${page}-light-${viewport}.png`)

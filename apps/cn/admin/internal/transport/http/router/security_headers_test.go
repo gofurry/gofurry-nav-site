@@ -16,7 +16,7 @@ func TestManagedAssetPreviewHeaders(t *testing.T) {
 	app := fiber.New()
 	registerMiddlewares(app)
 	attachEmbeddedUI(app)
-	for _, path := range []string{"/nav/sites/106", "/nav/hero-assets", "/nav/background-patterns"} {
+	for _, path := range []string{"/nav/sites/106", "/nav/hero-assets"} {
 		response, err := app.Test(httptest.NewRequest("GET", path, nil))
 		if err != nil {
 			t.Fatal(err)

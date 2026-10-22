@@ -1,14 +1,13 @@
 import { test, expect, expectLoaded, readManagedResources, changeRenderedResourceProp, origins, iconKey, nextIconKey } from '../fixtures/resource-routing'
 import { captureBrowserErrors } from '../fixtures/browser-errors'
 
-test('loaded icon/Hero/Pattern survive automatic/manual/Save; new keys use the pin and real failures fall back', async ({ page, routing }) => {
+test('loaded icon/Hero survive automatic/manual/Save; new keys use the pin and real failures fall back', async ({ page, routing }) => {
   const errors = captureBrowserErrors(page, routing.expectedNetworkFailures)
   await routing.open()
   const icon = page.locator('.nav-site-card__logo img').first()
   await icon.scrollIntoViewIfNeeded()
   await expectLoaded(icon)
   await expectLoaded(page.locator('.nav-header__background--managed img'))
-  await expect(page.locator('[data-pattern-status=server]')).toHaveCount(1)
   const before = await readManagedResources(page)
   expect(Object.values(before).every(url => url.includes('primary.example'))).toBe(true)
   await icon.evaluate(el => {

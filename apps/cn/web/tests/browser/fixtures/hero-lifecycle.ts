@@ -84,7 +84,6 @@ export const test = base.extend<{ hero: HeroLifecycle }, { lifecycleApp: Lifecyc
           saying: null, ping: {}, hero: { desktop: { id: '1', object_key: lifecycleKey('desktop', hash) }, mobile: state.emptyMobile ? null : { id: '2', object_key: lifecycleKey('mobile', hash) } } } }
       }
       if (url.pathname === '/api/v2/nav/home/hero') state.heroCalls.push(url)
-      if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: { schema_version: 1, patterns: [] } }
       return { data: [] }
     }, { NUXT_PUBLIC_ASSET_PRIMARY_BASE: heroOrigins.primary, NUXT_PUBLIC_ASSET_MIRROR_BASE: heroOrigins.mirror })
     try { await use(worker) }

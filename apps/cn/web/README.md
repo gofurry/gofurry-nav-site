@@ -41,7 +41,7 @@ NUXT_PUBLIC_SITE_URL=http://localhost:3000
 
 The public Ecosystem product is SSR-rendered at `/insights`, `/insights/sites`, and `/insights/games`, with English equivalents under `/en`. It consumes the stable Nav and Game `/api/v2/*/insights` contracts. Metric and range selections are stored in the URL query.
 
-Primary public system navigation icons use Phosphor. The default layout owns the theme background and exposes `--gf-page-pattern` as its replaceable asset slot. The shared mask-friendly `gofurry-pattern.svg` is repeated at 160px by default and receives its light/dark color and opacity from CSS; pages must not instantiate or cover their own background.
+Primary public system navigation icons use Phosphor. The default layout owns the canvas through `PublicPageBackground.vue`: one original bundled `background.webp`, repeating at 512px through CSS `background-image`, with theme-specific opacity on its separate decorative layer. There is no Mask, pattern catalog or page-background preference. Pages must not instantiate or cover their own background. Home Hero local images remain independent; Preferences retains Home and Resource routing.
 
 Run the deterministic route and interaction regressions against the production build:
 

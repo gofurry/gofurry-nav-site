@@ -16,7 +16,3 @@ SELECT id, name, object_key FROM gfn_home_hero_asset
 WHERE variant = sqlc.arg(variant) AND enabled AND NOT deleted
 ORDER BY id
 LIMIT sqlc.arg(page_size)::integer OFFSET sqlc.arg(page_offset)::integer;
-
--- name: PublicBackgroundPatterns :many
-SELECT id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px
-FROM gfn_background_pattern WHERE enabled AND NOT deleted ORDER BY sort_order,id;

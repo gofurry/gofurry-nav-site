@@ -1,7 +1,6 @@
 import type {
   HeroCatalog,
   NavHomeHero,
-  BackgroundPattern,
   NavHomePingResponse,
   NavHomeResponse,
   NavHomeSayingResponse,
@@ -52,9 +51,6 @@ export function getHeroCatalog(variant: 'desktop' | 'mobile', pageNum: number, s
   return useApi('navV2')('/nav/appearance/heroes', { query: { variant, page_num: pageNum, page_size: 12, selected_id: selectedId ?? undefined } })
 }
 
-export function getBackgroundPatterns(): Promise<{ schema_version: number; patterns: BackgroundPattern[] }> {
-  return useApi('navV2')('/nav/appearance/patterns')
-}
 
 export function getNavSiteIndex(): Promise<NavSiteIndexResponse> {
   return useApi('navV2')('/nav/sites/index')

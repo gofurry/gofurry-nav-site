@@ -19,7 +19,6 @@ require `content.write`, session authentication and the existing CSRF token.
 | --- | --- |
 | Site icon | `POST /sites/:id/icon` multipart `file`; `DELETE` clears to SQL NULL |
 | Hero | `GET/POST /hero-assets`, `GET/PUT/DELETE /hero-assets/:id`, `POST /hero-assets/:id/file` |
-| Pattern | `GET/POST /background-patterns`, `GET/PUT/DELETE /background-patterns/:id`, `POST /background-patterns/:id/file` |
 
 Creation uses multipart fields matching the metadata JSON names plus `file`.
 Hero creation requires `variant=desktop|mobile`; variant and object key cannot
@@ -29,14 +28,11 @@ Uploads return `object_key`, `primary`, `mirror`, `warnings`, and creation also
 returns `item`. These publication statuses are never stored in PostgreSQL.
 Admin reads include public preview links, never credentials.
 
-Pattern metadata: `name`, `name_en`, `light_color`, `dark_color`,
-`light_opacity`, `dark_opacity`, `default_size_px`, `enabled`, `sort_order`.
-The editor previews selected SVG bytes as repeating CSS masks before uploading.
-File replacement and metadata saving are separate explicit actions.
+Hero file replacement and metadata saving are separate explicit actions.
 
 Ordinary site creation/update rejects any `icon` input, including NULL; its SQL
 cannot change the icon. Dedicated mutations preserve original icon bytes and
-invalidate the existing Nav site cache. Hero/Pattern reads use current database
+invalidate the existing Nav site cache. Hero reads use current database
 state, so no new Redis keys or background synchronization jobs are introduced.
 
 `GOFURRY_ASSET_DEV_CONFIG=<ignored Admin YAML> go test ./internal/app/navadmin/controller -run TestRealDevManagedAssetAPI -count=1 -v`
@@ -63,7 +59,7 @@ Upload/Primary verification and best-effort Mirror precede the GFG transaction
 and existing independent GFA Audit. A Primary failure cannot change the reference;
 Mirror failure returns a warning. After commit, Showcase revision increments
 best-effort. Published Campaigns always retain required desktop artwork. Existing
-Nav Icon/Hero/Pattern contracts and initial production cutover remain unchanged.
+Nav Icon/Hero contracts and initial production cutover remain unchanged.
 Cloud Inspector and Mirror Repair accept these new keys through the existing
 CloudOps endpoints. Stage A cloud tests use injected stores, never real buckets.
 See [Game Showcase backend contract](game-showcase.md) for APIs and verification.
@@ -73,8 +69,8 @@ See [Game Showcase backend contract](game-showcase.md) for APIs and verification
 Home schema v4 replaces `backgrounds` with `hero.desktop` and `hero.mobile`.
 Each is either NULL or `{ "id": "...", "object_key": "nav/hero/..." }`.
 `GET /api/v2/nav/home/hero` replaces `/home/backgrounds`.
-`GET /api/v2/nav/appearance/patterns` returns schema version 1 and an ordered
-`patterns` array. Public responses contain keys, never COS/R2/CDN URLs.
+The retired `/api/v2/nav/appearance/patterns` route no longer exists. Hero public
+responses contain keys, never COS/R2/CDN URLs; page texture needs no API.
 The old Nav V1-to-V2 assessment describes the historical background endpoint;
 this contract supersedes that endpoint and the old numbered resource config.
 
@@ -123,8 +119,8 @@ local restoration; it writes the new mode without deleting the handle/cache.
 That first upgrade alone may transition from the SSR cloud image to the old
 local image, since the server cannot read legacy browser storage.
 
-The editor holds drafts until Save. Source options reuse the page-background
-selector, and compact underline tabs keep desktop/mobile browsing independent.
+The editor holds drafts until Save. Source options use the shared Preferences
+controls, and compact underline tabs keep desktop/mobile browsing independent.
 Arrows browse one preview at a time, automatically fetching adjacent metadata
 pages at their boundaries. The preview is the draft selection; there is no
 separate apply or random action inside the picker. Each viewport keeps its page
@@ -157,12 +153,11 @@ mode first, then the recommendation (default Primary). After hydration, idle wor
 performs two rounds of parallel GET probes and consumes and SHA-256 validates all
 8192 bytes of `system/probes/cdn.bin`. Mirror must be at least 20% or 50 ms faster.
 Both probes failing retains the previous recommendation. Terminal fallbacks are
-the bundled default logo, no Hero image and the bundled page pattern.
+the bundled default logo and no Hero image. The static page texture never uses CDN routing.
 
 ## Resource routing preferences (#107 / #121)
 
-Page preferences has three scroll-snap tabs: Home, Page background, and Resource
-routing. Home/End and wrapping Left/Right arrows work across all tabs. Resource
+Page preferences has two scroll-snap tabs: Home and Resource routing. Home/End and wrapping Left/Right arrows work across all tabs. Resource
 routing contains two independent sections:
 
 - **GoFurry assets:** Automatic / EdgeOne (Primary) / Cloudflare (Mirror).
@@ -259,7 +254,7 @@ snapshots/fallback and Hero cookie/state behavior. See
 [frontend testing](frontend/testing.md) for the runner boundaries.
 After `pnpm run build`, `pnpm run test:browser` runs Resource Routing against the production Nuxt
 application with isolated API/CDN fixtures to check SSR, actual loaded image
-stability, changed resources, failures, Save/Cancel, three-tab keyboard navigation
+stability, changed resources, failures, Save/Cancel, two-tab keyboard navigation
 and mobile/light/dark interaction. Playwright keeps traces/screenshots only on
 failure in ignored `test-results/`; no visual baseline is defined here.
 Hero lifecycle and Hero Preferences now share the same Browser Gate; their old
@@ -270,23 +265,28 @@ Run Nav Web `pnpm run test:unit`, `pnpm run test:nuxt`, `pnpm run insights:seman
 `pnpm run seo:recovery:test`, `pnpm run typecheck`, and `pnpm run build`.
 Nav Backend's opt-in `TestRealDevAppearanceQueries` uses only transaction-local
 temporary tables copied from the Goose schema to verify pool isolation,
-disabled/deleted filtering and pattern order on real PostgreSQL.
+disabled/deleted filtering and Hero pagination on real PostgreSQL.
 
-## Page background preferences
+## Static page texture (#149)
 
-Preferences offers bundled default, enabled server patterns and a local image.
-SVG uses the same repeating CSS mask as the public page, including light/dark
-colors, opacity and tile size. Raster images expose opacity and size only.
-Only explicit overrides are stored in `gf_background_preference`; catalog
-defaults remain live. Original SVG/raster bytes stay in
-IndexedDB. No local image upload endpoint exists. Clearing removes the stored
-Blob; missing/disabled patterns, missing local files and exhausted CDN retries
-fall back to the bundled pattern. SSR always renders the bundled background
-before browser-only preferences are loaded.
+`PublicPageBackground.vue` is the sole public canvas renderer. It uses the
+unchanged original 512×512 `/web/background/background.webp` with CSS
+`background-image`, `repeat`, and a 512px tile. The independent decorative layer
+has opacity 0.055 in Light and 0.075 in Dark; the canvas and page content remain
+opaque. The RGB wolf details and original alpha are preserved. No Mask, color
+replacement, client mount work, browser storage or catalog request is involved.
+SSR and hydration render the same static DOM. Old `gf_background_preference`
+and `gofurry-page-background` data are ignored, not migrated or read.
 
-After `pnpm run build`, run `pnpm run test:browser tests/browser/regression/background-storage.spec.ts`
-for real Preferences UI, Chromium IndexedDB persistence, original SVG bytes,
-raster decoding, reload/clear, metadata-only storage and zero network mutations.
+The Admin catalog, public API, SQL queries, uploads and page-background editors
+are removed. `gfn_background_pattern`, historical migrations and stored objects
+remain untouched pending a separately authorized data review/migration. CloudOps
+can still inspect/repair historical objects. Hero local images and shared
+COS/R2/CDN routing are independent and retained.
+
+Use `tests/browser/regression/static-page-background.spec.ts` for SSR, exact asset
+bytes, theme repeat/opacity, stale-preference isolation and absence of catalog/IDB
+reads; Preferences and routing owners verify the remaining two tabs.
 
 ## CloudOps
 
@@ -359,21 +359,23 @@ go test ./internal/infra/assets -run TestRealDevStorage -count=1 -v
 
 It requires development bucket/CDN names, calls real COS and R2 Put/Head/Get, checks both CDN responses, performs mirror repair, and verifies the fixed probe length/hash. It leaves a small set of immutable test objects (including a synthetic, unreferenced site ID); runtime credentials deliberately cannot delete objects. Normal unit tests skip live acceptance without this explicit configuration variable. A skipped test is not cloud acceptance.
 
-`TestRealDevStorageCORS` separately checks the probe and pattern with the real
-development browser Origin. A successful ordinary image GET does not prove CSS
-mask usability. On 2026-09-13, acceptance found missing Primary SVG CORS headers;
+`TestRealDevStorageCORS` checks the probe with the real development browser
+Origin. The following 2026-09-13 mask findings are historical; #149 retires page
+pattern masks and catalog consumers. On 2026-09-13, acceptance found missing Primary SVG CORS headers;
 the maintainer configured EdgeOne response headers for the development asset
 hostname and the HTTP plus production-Nuxt browser suites then passed. Runtime
 COS CAM permissions stayed unchanged; bucket configuration is not a runtime duty.
 
 The final browser suite (`pnpm run assets:cloud-smoke` after a production build)
-also verifies live catalog-default updates without copying defaults into browser
-overrides, local SVG/raster editing and clearing, 12-hour preference cookies,
-independent desktop/mobile AVIF reads and terminal icon/Hero/pattern fallbacks.
+verifies 12-hour preference cookies, independent desktop/mobile AVIF reads,
+terminal icon/Hero fallbacks and a static bundled page texture.
 It exercises actual development CDN URLs; its isolated API row fixtures complement
 the separate real PostgreSQL/Admin/cloud suites instead of replacing them.
 
-## Preview follow-up (2026-09-13)
+## Historical preview follow-up (2026-09-13)
+
+Page-background selection and SVG masks described below were retired by #149.
+These findings record the original cutover; Site Icon/Hero preview headers remain current.
 
 The initial SVG geometry whitelist is superseded by the owner's request to accept
 original SVG content without restrictions. Admin and local background selection

@@ -23,7 +23,7 @@ test('C3-R1 moves only the five Insights core owners and preserves other members
   assert.deepEqual(regressionGroups['insights-core'], core)
   for (const file of core) assert.equal(regressionGroups['insights-nav'].includes(file), false)
   assert.deepEqual(regressionGroups['insights-nav'], [
-    'background-storage.spec.ts',
+    'static-page-background.spec.ts',
     'hero-catalog.spec.ts',
     'hero-handoff.spec.ts',
     'hero-lifecycle.spec.ts',

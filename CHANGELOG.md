@@ -20,6 +20,8 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
+- Replace public-page background customization with one original bundled WebP texture and theme-controlled decorative opacity. Retire background editors and Admin/public pattern catalogs while preserving Hero local images, shared CDN facilities and historical database rows (#149).
+
 - Update the five active Go modules and tools to Go 1.26.10, and pin Nuxt Docker stages to Node 24.22.1 Bookworm Slim without changing third-party dependencies or lockfiles.
 - Rename the Nuxt workspace from `apps/cn/nav-web` to `apps/cn/web`, updating engineering paths and Admin's shared icon import. Preserve the `nav-web` Compose project, runtime service/image identity and CI names; make the build-only Node heap configurable with a 4096 MiB default.
 - Introduce the accepted floating twin-island navigation, Phosphor icons, responsive mobile handoff and integrated lottery/search/feedback utilities. Refine the inline mobile platform picker and page-local navigation clearance without changing search or routing semantics (#145).

@@ -1244,7 +1244,7 @@ for newly added files or script-generated styles.
 | Pure TS/domain/utility logic | Vitest `unit` project, Node environment, `tests/unit/*.test.ts` |
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
-| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO HTTP/SSR and background IndexedDB |
+| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO HTTP/SSR and static page texture |
 | Stable pixel appearance | `playwright.visual.config.ts` / `test:visual`; pinned sentinel and accepted surface golden comparisons |
 | Broad route/theme/overflow checks formerly in visual guard | Domain Browser/Visual cases plus P7.2 locale/theme gaps; explicit retirement mapping in the closure record |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
@@ -1933,3 +1933,20 @@ impression itself.
 Maintainer approval of the preceding appearance is recorded separately from this
 autoplay follow-up's pending dynamic review. No Visual baseline update or final
 Visual Closure is authorized by this work.
+
+
+## Static public page texture (#149)
+
+`PublicPageBackground.vue` alone renders the bundled original
+`/web/background/background.webp` through repeating CSS `background-image`.
+`tokens.less` owns canvas, 512px tile size and the decorative layer's Light/Dark
+opacity; no Mask or replacement color token remains. SSR and client DOM match.
+Page texture never reads browser preferences/IndexedDB or fetches a catalog.
+Preferences has only Home and Resource routing; preserve roving tab focus,
+Home/End/wrapping arrows, panel inertness, scrolling, Save/Cancel and #139 motion.
+Hero local images, Site Icon and per-resource CDN routing retain their contracts.
+The removed background editor/catalog has no compatibility consumer. The old
+GFN table/migrations and cloud objects remain untouched for separate review.
+`static-page-background.spec.ts`, Preferences and routing owners cover these
+contracts. Retired background-tab goldens are removed; remaining goldens are not
+refreshed by this issue and require separately reviewed visual reconciliation.

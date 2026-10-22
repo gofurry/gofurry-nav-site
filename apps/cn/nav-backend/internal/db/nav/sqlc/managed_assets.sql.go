@@ -21,53 +21,6 @@ func (q *Queries) CountPublicHeroAssets(ctx context.Context, variant string) (in
 	return count, err
 }
 
-const publicBackgroundPatterns = `-- name: PublicBackgroundPatterns :many
-SELECT id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px
-FROM gfn_background_pattern WHERE enabled AND NOT deleted ORDER BY sort_order,id
-`
-
-type PublicBackgroundPatternsRow struct {
-	ID            int64   `json:"id"`
-	Name          string  `json:"name"`
-	NameEn        string  `json:"name_en"`
-	ObjectKey     string  `json:"object_key"`
-	LightColor    string  `json:"light_color"`
-	DarkColor     string  `json:"dark_color"`
-	LightOpacity  float64 `json:"light_opacity"`
-	DarkOpacity   float64 `json:"dark_opacity"`
-	DefaultSizePx int32   `json:"default_size_px"`
-}
-
-func (q *Queries) PublicBackgroundPatterns(ctx context.Context) ([]PublicBackgroundPatternsRow, error) {
-	rows, err := q.db.Query(ctx, publicBackgroundPatterns)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []PublicBackgroundPatternsRow{}
-	for rows.Next() {
-		var i PublicBackgroundPatternsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.NameEn,
-			&i.ObjectKey,
-			&i.LightColor,
-			&i.DarkColor,
-			&i.LightOpacity,
-			&i.DarkOpacity,
-			&i.DefaultSizePx,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const publicHeroAsset = `-- name: PublicHeroAsset :one
 SELECT id, name, object_key FROM gfn_home_hero_asset
 WHERE id = $1 AND variant = $2 AND enabled AND NOT deleted

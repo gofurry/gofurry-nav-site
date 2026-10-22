@@ -57,7 +57,10 @@ business rationale; historical values are not automatically approved examples.
 The layout-owned canvas defaults (`--gf-page-background` and
 `--gf-page-pattern*`) now live in `tokens.less`. Their consumer,
 [PublicPageBackground.vue](../../apps/cn/web/app/components/common/PublicPageBackground.vue),
-keeps its existing behavior. [main.css](../../apps/cn/web/app/assets/css/main.css)
+renders one original bundled WebP through repeating `background-image`. Its
+512px tile preserves the supplied density; only the decorative layer receives
+theme opacity (Light 0.055 / Dark 0.075). No Mask/color token, client state,
+local upload or pattern catalog remains. Home Hero is independent. [main.css](../../apps/cn/web/app/assets/css/main.css)
 owns Tailwind bootstrap, browser reset and base helpers, not global theme tokens.
 
 ## Typography roles (#126)
@@ -548,13 +551,9 @@ Background/Hero/ResourceRoute private structure remain in their Vue scoped style
 The header override moved from the Modal SFC into the compound owner. Toggle
 events, ARIA and Save/Cancel behavior remain with the unchanged Vue logic.
 
-P4.2 keeps Background Preferences' private layout, scrolling and dynamic preview
-state in its Vue component. Control, palette, slider and preview appearance lives
-under `.gf-preferences-modal` in `components/preferences.less`. Its ordered
-`--gf-preferences-background-preset-*` palette and swatch ring are local product
-semantics, inherited unchanged by both themes, not global theme tokens. Vue reads
-the palette through its editor root's CSSOM; pattern defaults continue to consume
-the real `--gf-page-pattern-*` tokens without a duplicate fallback palette.
+#149 retires the former P4.2 Background Preferences editor, palette, slider,
+preview styles and dedicated preset tokens. Preferences retains Home/Hero and
+Resource routing with the existing shared controls and Motion contract.
 
 P2.3 retires 29 raw-color occurrences: 11 overridden values are deleted and 18
 effective values keep their meaning in 14 local semantic tokens. The safe updater

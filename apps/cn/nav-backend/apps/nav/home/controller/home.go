@@ -16,7 +16,6 @@ type homeReader interface {
 	GetHomeSaying(lang string) models.HomeSayingResponse
 	GetHomeHero(context.Context, models.HeroSelection) models.HomeHeroResponse
 	GetHeroes(context.Context, models.HeroCatalogQuery) (models.HeroCatalog, common.GFError)
-	GetPatterns(context.Context) (models.PatternCatalog, common.GFError)
 }
 
 type homeApi struct{ reader homeReader }
@@ -87,14 +86,6 @@ func (api homeApi) GetHeroes(c fiber.Ctx) error {
 	data, err := api.service().GetHeroes(c.Context(), models.HeroCatalogQuery{Variant: variant, PageNum: int32(page), PageSize: int32(size), SelectedID: selected})
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
-	}
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
-func (api homeApi) GetPatterns(c fiber.Ctx) error {
-	data, err := api.service().GetPatterns(c.Context())
-	if err != nil {
-		return common.NewResponse(c).Error(err)
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }

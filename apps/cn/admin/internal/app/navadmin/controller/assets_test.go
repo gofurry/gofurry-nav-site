@@ -36,17 +36,6 @@ func TestSiteIconCannotBeWrittenThroughOrdinaryPayload(t *testing.T) {
 }
 
 func TestAssetMetadataBoundaries(t *testing.T) {
-	valid := patternPayload{Name: "Test", NameEn: "Test", LightColor: "#123abc", DarkColor: "#abcdef", LightOpacity: 0, DarkOpacity: 1, DefaultSizePx: 1}
-	if err := validatePattern(valid); err != nil {
-		t.Fatal(err)
-	}
-	for _, mutate := range []func(*patternPayload){func(p *patternPayload) { p.DarkOpacity = 1.001 }, func(p *patternPayload) { p.LightColor = "red" }, func(p *patternPayload) { p.DefaultSizePx = 0 }, func(p *patternPayload) { p.NameEn = "" }} {
-		value := valid
-		mutate(&value)
-		if validatePattern(value) == nil {
-			t.Fatal("invalid appearance accepted")
-		}
-	}
 	for _, body := range []string{`{"name":"x","variant":"mobile"}`, `{"name":"x","object_key":"anything"}`, `{"name":"x"} {}`} {
 		if decodeAssetJSON([]byte(body), &heroPayload{}) == nil {
 			t.Fatal("immutable fields or multiple payloads accepted")

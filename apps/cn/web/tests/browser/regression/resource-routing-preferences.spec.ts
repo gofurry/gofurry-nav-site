@@ -1,14 +1,14 @@
 import { test, expect } from '../fixtures/resource-routing'
 import { captureBrowserErrors } from '../fixtures/browser-errors'
 
-test('three tabs support wrapping arrows, Home/End and active keyboard focus', async ({ page, routing }) => {
+test('two tabs support wrapping arrows, Home/End and active keyboard focus', async ({ page, routing }) => {
   const errors = captureBrowserErrors(page)
   await routing.open()
   routing.releaseProbes()
   await routing.openResourceRouting()
   const tabs = page.locator('.preferences-tabs').getByRole('tab')
-  await expect(tabs).toHaveCount(3)
-  for (const [key, index] of [['Home', 0], ['ArrowLeft', 2], ['ArrowRight', 0], ['End', 2], ['ArrowLeft', 1], ['ArrowRight', 2]] as const) {
+  await expect(tabs).toHaveCount(2)
+  for (const [key, index] of [['Home', 0], ['ArrowLeft', 1], ['ArrowRight', 0], ['End', 1], ['ArrowLeft', 0], ['ArrowRight', 1]] as const) {
     await page.keyboard.press(key)
     await routing.settleTab(index)
     await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true')
@@ -74,8 +74,8 @@ test('routing controls keep focus indication and work at 390px in light and dark
   await page.locator('.gf-nav__mobile-toggle').click()
   await page.locator('.gf-nav__mobile-panel .gf-nav__mobile-action').click()
   await page.locator('.preferences-tabs').getByRole('tab').last().click()
-  await routing.settleTab(2)
-  const routingPage = page.locator('.preferences-page').nth(2)
+  await routing.settleTab(1)
+  const routingPage = page.locator('.preferences-page').nth(1)
   expect(await routingPage.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
   await cloudflare.check()
   await expect(cloudflare).toBeChecked()

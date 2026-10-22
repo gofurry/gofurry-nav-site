@@ -243,7 +243,7 @@ Results and before/after duration live in the [#134 acceptance record](../accept
 | Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `pnpm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
 | Repository Contract Guards | `pnpm run insights:semantics`, `pnpm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `pnpm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `pnpm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `pnpm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and static page texture |
 | Playwright Visual | `tests/browser/visual/*.spec.ts`, `pnpm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
 | Broad route/theme/overflow checks | Domain Browser/Visual contracts, including P7.2 locale/theme gaps | The legacy visual report runner is retired; no second browser lifecycle or success screenshot inventory |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -441,7 +441,7 @@ maintainer visual acceptance is separate from automated acceptance.
 
 | Former `scripts/` suite | Current owner | Preserved contracts |
 | --- | --- | --- |
-| `managed-assets.test.mjs` | `tests/unit/managed-assets.test.ts` | Key validation, selection threshold, fallback/duplicate URLs, full probe body and digest, background preference normalization and explicit overrides |
+| `managed-assets.test.mjs` | `tests/unit/managed-assets.test.ts` | Key validation, selection threshold, fallback/duplicate URLs, full probe body and digest; retired page-background preferences have no consumer |
 | `game-tag-domain.test.mjs` | `tests/unit/game-tag-domain.test.ts` | Explicit/empty categories, selected state, expansion preservation, Adult code rather than historical numeric ID |
 | `hero-preferences.test.mjs` | `tests/unit/hero-preferences.test.ts` + `tests/nuxt/use-hero-preferences.nuxt.test.ts` | Bigint-safe IDs, normalization, SSR query/key, actual cookie round trip, retained viewport IDs, revision/legacy state and unrelated Save/cookie isolation |
 | `resource-routing.test.mjs` | `tests/unit/resource-routing.test.ts` + `tests/nuxt/asset-composables.nuxt.test.ts` | Pin/recommendation separation, Steam groups/sample fallback, diagnostics, mount/idle/deduplication/TTL/cooldown/offline/Save-Data, per-resource snapshots, Hero handoff and real error fallback |
@@ -553,7 +553,7 @@ The fixture owns all network interception: exact Managed fixture origins and
 known Steam origins return local binary/SVG responses, and unknown external
 requests are aborted. Managed probes use `tests/fixtures/cdn-probe.bin` with
 the real digest and CORS path. Real routing plugins remain active. Cookies and
-background/optional legacy Steam storage are seeded before navigation/hydration.
+optional legacy Steam storage is seeded before navigation/hydration.
 The narrow prop bridge simulates new `objectKey`/`src` on the same mounted
 resource component; it is test-only and not a shared Vue introspection API.
 
@@ -568,7 +568,7 @@ The former `scripts/resource-routing-smoke.mjs` is retired with this mapping:
 | Former assertion | Current owner under `tests/browser/` |
 | --- | --- |
 | Managed and Steam SSR explicit pin takes precedence; Routing UI hydrates with two sections | `smoke/resource-routing.spec.ts` (3 cases) |
-| Three tabs, Home/End/wrapping arrows and focus; Cancel/Save pins; manual diagnostics/cooldown survive Cancel; 390px no overflow/focus/light/dark; English failed pins with two warnings | `regression/resource-routing-preferences.spec.ts` (4 cases) |
+| Two tabs, Home/End/wrapping arrows and focus; Cancel/Save pins; manual diagnostics/cooldown survive Cancel; 390px no overflow/focus/light/dark; English failed pins with two warnings | `regression/resource-routing-preferences.spec.ts` (4 cases) |
 | Loaded icon/Hero/Pattern survive automatic/manual/Save; icon src MutationObserver; new key uses current pin; actual mirror failure falls back to primary without clearing pin | `regression/managed-asset-routing.spec.ts` (1 lifecycle case) |
 | Loaded Steam image survives automatic/manual/Save; new src uses Global; first host failure falls back without clearing pin; legacy storage migrates only to recommendation, is deleted, retains hydrated China image and Auto UI | `regression/steam-asset-routing.spec.ts` (2 cases, legacy migration separate) |
 
@@ -789,7 +789,7 @@ Modal geometry uses frame bounds plus header/tab/active-panel overflow checks.
 Its aggregate `scrollWidth` also includes the offscreen Routing `sr-only` legends:
 their absolute containing block is the Modal because of `backdrop-filter`, despite
 their clipped pixels. Do not misclassify those accessible labels or the intentional
-three-page carousel as visible overflow; do not alter production CSS to remove them.
+two-page carousel as visible overflow; do not alter production CSS to remove them.
 
 Routing alone fixes browser `Date.now()` to `VISUAL_FIXED_NOW` and seeds fresh
 Managed 10/20 ms and Steam 30/60 ms diagnostics. Existing Primary/Global pins
@@ -797,19 +797,19 @@ remain; recommendations are Primary/China. The wrapper checks zero probe traffic
 stable measurements and collapsed Details. There are no probe gates, screenshot
 sleeps, masks or tolerance overrides.
 
-`preferences-modal.spec.ts` adds exactly eight images under
+`preferences-modal.spec.ts` retains six images under
 `tests/browser/visual/__snapshots__/preferences-modal.spec.ts/`:
 
 - `preferences-home-{light,dark}-{desktop,mobile}.png` (four): Random Hero,
   Quick Access on and the default display-mode input.
-- `preferences-background-light-{desktop,mobile}.png` (two): default pattern,
-  no artificial pattern gallery.
 - `preferences-routing-light-{desktop,mobile}.png` (two): fixed diagnostics.
 
 Desktop is 1440×900 and Mobile 390×844. Each locator captures the real
 `.gf-modal-backdrop`, including centering and outer padding. The Visual suite has
-**13 cases** (sentinel + 4 Foundation + 8 Preferences); the existing Visual CI job
-discovers them. Foundation images remain unchanged. NSFW, catalogs, local pickers
+**11 cases** in this Foundation/Preferences subset (sentinel + 4 Foundation + 6 Preferences); the existing Visual CI job
+discovers them. #149 removes the two retired background-tab goldens; the six
+remaining Preferences goldens need reviewed reconciliation for the two-tab bar.
+No existing remaining baseline was refreshed in #149. NSFW, catalogs, local pickers
 and business pages are outside this matrix; business surface visuals belong to P4+.
 
 The initial eight images are explicitly authorized by the P3.3.3 task. Generate
@@ -1043,9 +1043,8 @@ network access. Both are counted separately; all other upstream/external calls
 fail. Mobile Home uses `assertHeroHydration` to verify actual SSR Footer/content and the
 retained SSR Hero with zero hydration errors in both locales. Raw errors remain
 in the attachment; the former one-mismatch exception is retired.
-The real Mode modal also mounts Background Editor eagerly: a further approved
-exception allows exactly one empty `/nav/appearance/patterns` catalog only after
-the Mobile Functional test clicks BottomTab Mode. Other Terms scenarios allow none.
+The real Mode modal now mounts only Home/Hero and Resource routing. Terms and
+BottomTab Mode allow no catalog requests; #149 retires the former exception.
 
 Two Functional cases own Desktop Theme→EN routing to `/en/terms` and persistent
 Dark state; Mobile menu theme retention, route-driven close, English active state,
@@ -1484,8 +1483,7 @@ All destinations below are in `tests/browser/regression/`. The zh/en and
 
 | Retired runner / assertion group | Executable owner and cases |
 | --- | --- |
-| `background-storage-smoke.mjs`: original SVG declaration/DOCTYPE/comment/style/path; Proxy persistence; explicit color/zero opacity/200 size; reload/clear; metadata-only localStorage; no upload | `background-storage.spec.ts`: SVG UI save/reload/clear; raster decode; server-pattern metadata cases. Real `/terms` → Preferences → file input/Save; read-only IDB inspection of `gofurry-page-background/local-background/selected`, never the Local Hero DB |
-| Same: PNG decode, kind discrimination, server ID/default-versus-override storage | Raster and server-pattern cases; `createImageBitmap`, original Blob bytes and no binary/data/blob URL in preference storage; all three reject HTTP mutations |
+| Retired page-background customization/storage/catalog (#149) | `static-page-background.spec.ts`: original WebP SHA-256, SSR/static DOM, repeat/512px tile, Light/Dark opacity at 1440/390px, ignored old preferences, zero IDB/catalog reads. Local Hero storage remains covered by its own owner. |
 | `seo-recovery-smoke.mjs`: Search/Prize/Activation robots headers; Home canonical/hreflang; Site redirects/entity-target canonical; Site/Game SSR; Site Group metadata | `seo-recovery.spec.ts`: localized noindex/canonical/redirect cases. Group title/description are explicitly asserted here: the existing Site Groups pagination contract did not cover metadata |
 | Same: invalid/missing/foreign-domain 404, Steam 404, noindex, sitemap inventories/exclusions, upstream 503 | Localized authoritative-missing cases; canonical sitemap case; three independent Site/Game/sitemap failure cases. HTTP checks use the real Nitro response and `maxRedirects: 0` for redirects |
 | `insights-overview-smoke.mjs`: three-source SSR, earlier generated_at, independent 238/213/47 stats, five sections, locale links, activity/pulse/progress/media/layout/focus | `insights-overview.spec.ts`: #108-A1.2 closeout uses exactly two parallel Overview sources and no Home/entity requests; zh/en SSR/hydration/media/layout matrix, independent counts, both Hero metric exclusions, zero/missing evidence, native progress semantics and no unqualified Game artwork |

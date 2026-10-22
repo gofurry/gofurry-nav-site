@@ -336,17 +336,6 @@ export interface NavHomeHero {
     desktop: ManagedHeroAsset | null;
     mobile: ManagedHeroAsset | null;
 }
-export interface BackgroundPattern {
-    id: string;
-    name: string;
-    name_en: string;
-    object_key: string;
-    light_color: string;
-    dark_color: string;
-    light_opacity: number;
-    dark_opacity: number;
-    default_size_px: number;
-}
 
 export interface NavHomeSpotlight {
     page_size: number;
