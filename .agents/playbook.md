@@ -2,7 +2,7 @@
 
 Run commands from the named module unless stated otherwise.
 
-From the root, start with `task doctor` (Task >=3.45.3, Go 1.26.9, Node 24,
+From the root, start with `task doctor` (Task >=3.45.3, Go 1.26.10, Node 24,
 pnpm 12.6.0), then `task verify` for frozen dependencies, frontend builds, checks,
 local tests and native Go builds. Building Admin first supplies its embed files
 on a clean checkout. `task check` never formats or generates source; it requires

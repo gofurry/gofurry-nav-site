@@ -27,7 +27,7 @@ Usable partial data remains available with optional `warnings` for incomplete
 Chinese/English details or a missing cover. React shows those warnings and only
 applies nonempty content fields; an entirely unavailable lookup remains an error.
 
-Requirements: Go 1.26.9, Node.js 24 / pnpm 12.6.0, PostgreSQL, and Redis.
+Requirements: Go 1.26.10, Node.js 24 / pnpm 12.6.0, PostgreSQL, and Redis.
 
 ~~~bash
 # React Admin (development server on 5178, API proxy to 10099)

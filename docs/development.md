@@ -2,19 +2,29 @@
 
 ## Prerequisites
 
-- Go 1.26.9 for all five active Go modules and `tools`
+- Go 1.26.10 for all five active Go modules and `tools`
 - Task >=3.45.3 (built-in file utilities on Windows)
 - Node.js 24 and pnpm 12.6.0 for `apps/cn/web` and `apps/cn/admin/react`
 - development PostgreSQL and Redis matching the selected app configuration
 - sqlc and govulncheck through the pinned Go tools in `tools/go.mod`
 
-Root `.go-version` (`1.26.9`) and `.node-version` (`24`) provide development
+Root `.go-version` (`1.26.10`) and `.node-version` (`24`) provide development
 tool discovery. They do not create a workspace or override module ownership:
 each Go module still declares its version in `go.mod`, and Actions setup-go
 continues to read those files. Actions setup-node and `task doctor` read the
 root declarations; production policy rejects drift between the declared Go
 versions and the pinned toolchain requirements. Frontend pnpm versions remain
 owned by each `packageManager` field.
+
+Production Go artifacts stay on Go 1.26.10. When the build host has a newer Go
+series, select `GOTOOLCHAIN=go1.26.10` explicitly for release builds; the module's
+`go` directive is a minimum requirement, not a cap on the host compiler.
+Updating host Go alone does not update existing binaries.
+
+Nuxt Docker pins `node:24.22.1-bookworm-slim` in `base`; `deps`, `build` and
+`runner` inherit that runtime. Workstation discovery and CI setup-node retain
+Node 24, and pnpm remains 12.6.0. Existing containers require a separately
+authorized image rebuild and deployment to receive the new runtime.
 
 The repository has no `go.work` or root pnpm workspace. Each frontend pins
 `packageManager: pnpm@12.6.0`, owns its `pnpm-lock.yaml`, and uses its local

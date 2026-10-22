@@ -119,6 +119,15 @@ func TestFrontendWorkspaceKeepsDeploymentIdentity(t *testing.T) {
 		}
 	}
 	dockerfile := string(read("Dockerfile"))
+	var stages []string
+	for _, line := range strings.Split(dockerfile, "\n") {
+		if strings.HasPrefix(line, "FROM ") {
+			stages = append(stages, strings.TrimSpace(line))
+		}
+	}
+	if strings.Join(stages, "\n") != "FROM node:24.22.1-bookworm-slim AS base\nFROM base AS deps\nFROM deps AS build\nFROM deps AS runner" {
+		t.Fatal("all Docker stages must inherit the pinned Node 24.22.1 Bookworm Slim runtime")
+	}
 	before, buildAndRunner, ok := strings.Cut(dockerfile, "FROM deps AS build")
 	if !ok || strings.Contains(before, "NODE_OPTIONS") || strings.Contains(before, "NODE_BUILD_HEAP_MB") {
 		t.Fatal("build heap must not enter shared dependency stages")

@@ -19,7 +19,7 @@ var productionModules = []string{
 	"apps/cn/nav-collector",
 }
 
-const requiredGoVersion = "1.26.9"
+const requiredGoVersion = "1.26.10"
 
 var forbidden = []struct {
 	name    string

@@ -238,7 +238,7 @@ func TestToolchainDeclarationDrift(t *testing.T) {
 		t.Fatalf("root toolchain declarations: %v %+v", err, findings)
 	}
 	for _, file := range []string{".go-version", ".node-version"} {
-		for _, value := range []string{"", "1.26.7", "24.1", "invalid"} {
+		for _, value := range []string{"", "1.26.7", "1.26.9", "24.1", "invalid"} {
 			t.Run(file+"/"+value, func(t *testing.T) {
 				root := t.TempDir()
 				for path, content := range map[string]string{".go-version": requiredGoVersion, ".node-version": "24"} {

@@ -1,6 +1,6 @@
 module github.com/gofurry/gofurry-game-backend
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/bwmarrin/snowflake v0.3.0
