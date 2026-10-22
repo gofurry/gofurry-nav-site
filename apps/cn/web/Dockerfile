@@ -1,23 +1,4 @@
-FROM node:24.22.0-bookworm-slim AS base
-
-# Temporary Linux AMD64 bridge until the official 24.22.1 Bookworm Slim image is
-# available. Then restore that FROM tag and remove this ENV/RUN installation.
-ENV NODE_VERSION=24.22.1
-# SHA-256 is pinned from https://nodejs.org/dist/v24.22.1/SHASUMS256.txt.
-RUN set -eux; \
-    test "$(dpkg --print-architecture)" = amd64; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends ca-certificates curl; \
-    curl --fail --show-error --location --proto '=https' --tlsv1.2 \
-      --output /tmp/node-v24.22.1-linux-x64.tar.gz \
-      https://nodejs.org/dist/v24.22.1/node-v24.22.1-linux-x64.tar.gz; \
-    echo 'eb6728e77c576a35162c122c45ccadf224d89ff00abc8dae46cc2897c6002d7c  /tmp/node-v24.22.1-linux-x64.tar.gz' | sha256sum --check --strict -; \
-    tar -xzf /tmp/node-v24.22.1-linux-x64.tar.gz -C /usr/local --strip-components=1 --no-same-owner; \
-    rm /tmp/node-v24.22.1-linux-x64.tar.gz; \
-    apt-get purge -y --auto-remove curl; \
-    rm -rf /var/lib/apt/lists/*; \
-    test "$(node --version)" = v24.22.1; \
-    npm --version
+FROM node:24.22.1-bookworm-slim AS base
 
 WORKDIR /app
 ENV NUXT_TELEMETRY_DISABLED=1
