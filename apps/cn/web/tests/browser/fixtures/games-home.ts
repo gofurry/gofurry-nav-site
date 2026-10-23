@@ -469,7 +469,7 @@ export async function assertGamesHomeAppearance(scene: GamesHomeScene) {
   await expect(scene.page.locator('.game-tool-dock')).toHaveCount(0)
   await expect(dock.locator('.gf-nav__utility-row > a, .gf-nav__utility-row > button')).toHaveCount(3)
   await css(scene.page.locator('.gf-nav__actions > .gf-nav__shell:visible'), {
-    'background-color': dark ? 'rgba(15, 22, 33, 0.97)' : 'rgba(24, 33, 47, 0.96)',
+    'background-color': dark ? 'rgba(20, 22, 25, 0.97)' : 'rgba(24, 33, 47, 0.96)',
     'border-width': '0px', 'box-shadow': 'none', 'background-image': 'none', 'backdrop-filter': 'blur(10px)' })
   await assertStatsAppearance(scene)
 }

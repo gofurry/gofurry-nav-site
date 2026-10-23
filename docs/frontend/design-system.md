@@ -54,13 +54,18 @@ tokens need not become global just because multiple pages use the primitive.
 Domain tokens normally alias global meaning. Independent domain values need a
 business rationale; historical values are not automatically approved examples.
 
-The layout-owned canvas defaults (`--gf-page-background` and
-`--gf-page-pattern*`) now live in `tokens.less`. Their consumer,
+The layout-owned canvas (`--gf-page-background`) and edge-dot parameters
+(`--gf-page-dot-*`) live in `tokens.less`. The sole consumer,
 [PublicPageBackground.vue](../../apps/cn/web/app/components/common/PublicPageBackground.vue),
-renders one original bundled WebP through repeating `background-image`. Its
-512px tile preserves the supplied density; only the decorative layer receives
-theme opacity (Light 0.055 / Dark 0.075). No Mask/color token, client state,
-local upload or pattern catalog remains. Home Hero is independent. [main.css](../../apps/cn/web/app/assets/css/main.css)
+keeps a fixed solid Light `#f2e3d0` / Dark `#1d1f22` canvas and an absolute page-top
+decoration. Radial dots fade horizontally per side and vertically through nested
+linear masks; no mask compositing, image, animation or JS is needed. Desktop uses
+26px / 0.8px dots in each `min(22%, 340px)` edge, fading by 520px. Mobile uses a
+28px top grid fading by 185px. Light warm-gray `#806c58` / Dark gray `#c1c5cb`
+maximum alpha is 0.24 / 0.22, tablet 0.16 / 0.15, mobile 0.12 / 0.10.
+Only Dark surface/input/modal/nav/footer tokens are neutralized for #151; existing
+transparency, focus and elevation mechanisms remain. No page preference, upload
+or catalog remains. Home Hero is independent. [main.css](../../apps/cn/web/app/assets/css/main.css)
 owns Tailwind bootstrap, browser reset and base helpers, not global theme tokens.
 
 ## Typography roles (#126)

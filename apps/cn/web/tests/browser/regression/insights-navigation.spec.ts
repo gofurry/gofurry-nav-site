@@ -12,21 +12,20 @@ for (const route of ['/insights/sites', '/en/insights/games']) {
   })
 }
 
-test('Insights navigation retains its plain hierarchy and real Light/Dark public canvas', async ({ page, request, runtime }) => {
+test('Insights navigation retains its plain hierarchy and real Light/Dark public canvas', async ({ page, runtime }) => {
   const html = await openRuntime(page, '/insights/sites?metric=ipv6&range=30d&dimension=country')
   expect(html).toContain('insights-page'); expect(html).not.toContain('insights-hero')
   expect(html).toContain('data-public-background'); expect(html).toContain('data-pattern-status="default"')
   expect(html).toContain('生态观测')
   await expect(page.locator('.gf-nav__links [aria-current="page"]')).toHaveAttribute('href', '/insights')
   expect(await page.locator('.ecosystem-navigation').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
-  const pattern = await request.get('/web/background/background.webp')
-  expect(pattern.status()).toBe(200); expect(pattern.headers()['content-type']).toContain('image/webp')
-  const background = () => page.locator('.gf-public-background__pattern').evaluate(el => {
+  const background = () => page.locator('.gf-public-background__dots--left').evaluate(el => {
     const style = getComputedStyle(el)
     return { mask: style.maskImage, image: style.backgroundImage, opacity: Number(style.opacity), repeat: style.backgroundRepeat, size: style.backgroundSize }
   })
-  expect(await background()).toMatchObject({ mask: 'none', opacity: .055, repeat: 'repeat', size: '512px 512px' })
-  expect((await background()).image).toContain('background.webp')
+  expect(await background()).toMatchObject({ mask: expect.stringContaining('linear-gradient'), opacity: 1, repeat: 'repeat', size: '26px 26px' })
+  expect((await background()).image).toContain('radial-gradient')
+  await expect(page.locator('[data-public-background]')).toHaveCSS('background-color', 'rgb(242, 227, 208)')
   const nav = await page.evaluate(() => {
     const primary = document.querySelector('.insights-primary-nav')!, domain = document.querySelector('.insights-domain-nav[data-domain="site"]')!
     const p = primary.getBoundingClientRect(), d = domain.getBoundingClientRect()
@@ -40,8 +39,9 @@ test('Insights navigation retains its plain hierarchy and real Light/Dark public
   for (const selector of ['.insights-primary-nav', '.insights-domain-nav']) await expect(page.locator(selector + ' [aria-current="page"]')).toHaveAttribute('href', '/insights/sites')
   await page.getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
   await expect(page.locator('html')).toHaveClass(/dark/)
-  await expect.poll(background).toMatchObject({ mask: 'none', opacity: .075, repeat: 'repeat', size: '512px 512px' })
-  expect((await background()).image).toContain('background.webp')
+  await expect.poll(background).toMatchObject({ mask: expect.stringContaining('linear-gradient'), opacity: 1, repeat: 'repeat', size: '26px 26px' })
+  expect((await background()).image).toContain('radial-gradient')
+  await expect(page.locator('[data-public-background]')).toHaveCSS('background-color', 'rgb(29, 31, 34)')
   runtime.assertQuiet()
 })
 

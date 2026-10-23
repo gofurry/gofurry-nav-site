@@ -14,12 +14,17 @@
   --gf-font-sans: "Manrope Variable", "Noto Sans SC Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --gf-font-mono: "Cascadia Mono", "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", ui-monospace, monospace;
 
-  /* Page & Canvas: one bundled RGB/alpha texture; opacity belongs only to
-     the decorative layer, never to content or the canvas beneath it. */
+  /* Page & Canvas: fixed solid canvas with page-top decorative dots.
+   * RGB channels and alpha describe each dot before the edge masks fade it.
+   */
   --gf-page-background: #f2e3d0;
-  --gf-page-pattern: url('/web/background/background.webp');
-  --gf-page-pattern-opacity: 0.055;
-  --gf-page-pattern-size: 512px 512px;
+  --gf-page-dot-color: 128, 108, 88;
+  --gf-page-dot-alpha: 0.24;
+  --gf-page-dot-spacing: 26px;
+  --gf-page-dot-radius: 0.8px;
+  --gf-page-dot-mask-opaque: #000;
+  --gf-page-dot-height: 520px;
+  --gf-page-dot-edge-width: min(22%, 340px);
 
   /* Surface: reusable content surfaces; strong increases separation and hover
    * expresses interactive emphasis. Form controls retain their own semantics.
@@ -101,13 +106,14 @@
  */
 html.dark {
   /* Page & Canvas */
-  --gf-page-background: #0b1728;
-  --gf-page-pattern-opacity: 0.075;
+  --gf-page-background: #1d1f22;
+  --gf-page-dot-color: 193, 197, 203;
+  --gf-page-dot-alpha: 0.22;
 
   /* Surface */
-  --gf-surface: rgba(226, 232, 240, 0.08);
-  --gf-surface-strong: rgba(226, 232, 240, 0.14);
-  --gf-surface-hover: rgba(226, 232, 240, 0.16);
+  --gf-surface: rgba(229, 231, 235, 0.08);
+  --gf-surface-strong: rgba(229, 231, 235, 0.14);
+  --gf-surface-hover: rgba(229, 231, 235, 0.16);
 
   /* Border */
   --gf-border: rgba(226, 232, 240, 0.18);
@@ -126,13 +132,13 @@ html.dark {
   --gf-accent-contrast: rgba(248, 250, 252, 0.96);
 
   /* Form Controls */
-  --gf-input-bg: rgba(15, 23, 42, 0.72);
-  --gf-input-bg-focus: rgba(15, 23, 42, 0.90);
+  --gf-input-bg: rgba(32, 34, 38, 0.72);
+  --gf-input-bg-focus: rgba(32, 34, 38, 0.90);
 
   /* Modal & Overlay */
   --gf-modal-bg:
-    linear-gradient(180deg, rgba(22, 30, 45, 0.94), rgba(12, 18, 30, 0.92)),
-    rgba(15, 23, 42, 0.88);
+    linear-gradient(180deg, rgba(38, 40, 44, 0.94), rgba(25, 27, 30, 0.92)),
+    rgba(32, 34, 38, 0.88);
   --gf-modal-border: rgba(255, 255, 255, 0.14);
   --gf-modal-divider: rgba(255, 255, 255, 0.08);
   --gf-modal-overlay: rgba(2, 6, 23, 0.64);
@@ -151,4 +157,20 @@ html.dark {
   --gf-shadow-hover: 0 22px 54px rgba(0, 0, 0, 0.34);
 
   /* Shape and Motion inherit the root values. */
+}
+
+/* Narrower canvases keep the same dot grid with quieter decoration. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  :root { --gf-page-dot-alpha: 0.16; }
+  html.dark { --gf-page-dot-alpha: 0.15; }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --gf-page-dot-alpha: 0.12;
+    --gf-page-dot-spacing: 28px;
+    --gf-page-dot-height: 185px;
+  }
+
+  html.dark { --gf-page-dot-alpha: 0.10; }
 }

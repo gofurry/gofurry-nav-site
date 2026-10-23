@@ -67,7 +67,7 @@ export async function startInsightsFixtureApp(resolveResponse, runtimeOverrides 
     if (preview.exitCode === null) { preview.kill(); await once(preview, 'exit') }
     await new Promise(resolve => upstream.close(resolve))
   }
-  try { await ready(base + '/web/background/background.webp', preview) }
+  try { await ready(base + '/defaultLogo.svg', preview) }
   catch (error) { await close(); throw error }
   return { base, upstreamUrl, requests, close, logs: () => logs }
 }

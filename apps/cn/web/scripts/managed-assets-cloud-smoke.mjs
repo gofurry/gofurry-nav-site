@@ -67,7 +67,7 @@ try {
     await page.waitForSelector('.nav-header__background--managed')
     return { page, context, probes, assets, errors, mutations, failures }
   }
-  const background = '.gf-public-background__pattern'
+  const background = '.gf-public-background__dots--left'
   const hero = '.nav-header__background--managed'
   async function closeContext(context) { await context.unrouteAll({ behavior: 'wait' }); await context.close() }
   async function loadedImage(page, locator) {
@@ -94,7 +94,7 @@ try {
   await normal.page.mouse.wheel(0, 950)
   const icon = normal.page.locator('.nav-site-card__logo img').first()
   await loadedImage(normal.page, icon)
-  assert((await normal.page.locator(background).evaluate(el => getComputedStyle(el).backgroundImage)).includes('/web/background/background.webp'))
+  assert((await normal.page.locator(background).evaluate(el => getComputedStyle(el).backgroundImage)).includes('radial-gradient'))
   // A tiny probe finishing does not imply that the original Hero request has
   // finished; route selection now deliberately leaves that request unchanged.
   if (!normal.assets.some(r => r.url().endsWith('/' + desktopKey) && r.ok())) {
@@ -122,9 +122,9 @@ try {
   const defaultIcon = failBoth.page.locator('.nav-site-card__logo img').first()
   await loadedImage(failBoth.page, defaultIcon)
   assert.equal(await defaultIcon.getAttribute('src'), '/defaultLogo.svg')
-  assert((await failBoth.page.locator(background).evaluate(el => getComputedStyle(el).backgroundImage)).includes('/web/background/background.webp'))
+  assert((await failBoth.page.locator(background).evaluate(el => getComputedStyle(el).backgroundImage)).includes('radial-gradient'))
   await closeContext(failBoth.context)
-  console.log('[assets real] Both CDNs fail -> bundled icon / no Hero / bundled pattern PASS')
+  console.log('[assets real] Both CDNs fail -> bundled icon / no Hero / CSS dots PASS')
 
   const mobile = await newPage({ mobile: true })
   await mobile.page.waitForFunction(selector => document.querySelector(selector + ' img')?.currentSrc.includes('/mobile/'), hero)

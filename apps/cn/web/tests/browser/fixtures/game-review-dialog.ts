@@ -309,8 +309,8 @@ export async function assertReviewAppearance(scene: ReviewScene) {
   await scene.settle()
   await css(dialog, { width: page.viewportSize()!.width === 390 ? '358px' : '480px', padding: '19.2px', 'border-width': '1px',
     'border-color': dark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(126, 92, 58, 0.18)', 'border-radius': '16.8px',
-    'background-color': dark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 250, 242, 0.92)',
-    'background-image': dark ? 'linear-gradient(rgba(22, 30, 45, 0.94), rgba(12, 18, 30, 0.92)), none' : 'none',
+    'background-color': dark ? 'rgba(32, 34, 38, 0.88)' : 'rgba(255, 250, 242, 0.92)',
+    'background-image': dark ? 'linear-gradient(rgba(38, 40, 44, 0.94), rgba(25, 27, 30, 0.92)), none' : 'none',
     'box-shadow': dark ? 'rgba(2, 6, 23, 0.42) 0px 28px 72px 0px' : 'rgba(45, 28, 12, 0.2) 0px 22px 70px 0px', 'backdrop-filter': 'blur(12px)',
     'animation-duration': '0.18s', 'animation-timing-function': 'cubic-bezier(0.22, 1, 0.36, 1)' })
   await css(backdrop, { 'padding-left': '16px', 'padding-right': '16px', 'backdrop-filter': 'blur(2px)',
@@ -321,14 +321,14 @@ export async function assertReviewAppearance(scene: ReviewScene) {
   for (const field of [name, content, score]) await css(field, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '400',
     color: dark ? 'rgba(248, 250, 252, 0.94)' : 'rgba(41, 37, 36, 0.92)', 'border-radius': '12px',
     'border-color': dark ? 'rgba(226, 232, 240, 0.28)' : 'rgba(126, 92, 58, 0.18)',
-    'background-color': dark ? 'rgba(15, 23, 42, 0.72)' : 'rgba(255, 255, 255, 0.46)', 'transition-property': 'border-color, background-color', 'transition-duration': '0.16s, 0.16s' })
+    'background-color': dark ? 'rgba(32, 34, 38, 0.72)' : 'rgba(255, 255, 255, 0.46)', 'transition-property': 'border-color, background-color', 'transition-duration': '0.16s, 0.16s' })
   if (dark) await expect.poll(() => name.evaluate(el => getComputedStyle(el, '::placeholder').color)).toBe('rgba(203, 213, 225, 0.76)')
   await css(submit, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '700', color: dark ? 'rgba(248, 250, 252, 0.96)' : 'rgb(255, 255, 255)',
     'border-radius': '12px', 'background-color': dark ? 'rgba(203, 213, 225, 0.18)' : 'rgba(180, 83, 9, 0.86)', opacity: '1' })
   await css(close, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '400', color: dark ? 'rgba(203, 213, 225, 0.76)' : 'rgba(120, 83, 53, 0.72)' })
   if (dark) {
     await close.hover(); await scene.settle()
-    await css(close, { 'background-color': 'rgba(226, 232, 240, 0.16)', color: 'rgba(248, 250, 252, 0.94)' })
+    await css(close, { 'background-color': 'rgba(229, 231, 235, 0.16)', color: 'rgba(248, 250, 252, 0.94)' })
     await submit.hover(); await scene.settle()
     await css(submit, { 'background-color': 'rgba(203, 213, 225, 0.26)' })
     await assertReviewFocus(scene)
@@ -340,7 +340,7 @@ export async function assertReviewFocus(scene: ReviewScene) {
   await scene.name.focus(); await scene.settle()
   await expect(scene.name).toBeFocused()
   await css(scene.name, { 'border-color': scene.theme === 'dark' ? 'rgba(125, 211, 252, 0.58)' : 'rgba(249, 115, 22, 0.42)',
-    'background-color': scene.theme === 'dark' ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.68)' })
+    'background-color': scene.theme === 'dark' ? 'rgba(32, 34, 38, 0.9)' : 'rgba(255, 255, 255, 0.68)' })
 }
 export async function assertReviewFeedback(scene: ReviewScene, message: string, success = false) {
   await expect(scene.feedback).toHaveText(message)

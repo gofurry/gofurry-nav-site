@@ -20,6 +20,8 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
+- Use a neutral graphite Dark canvas with coordinated surface tokens and scrolling CSS edge-dot fades across public pages. Remove the retired WebP texture; keep the warm Light canvas and existing navigation geometry unchanged (#149, #151).
+
 - Replace public-page background customization with one original bundled WebP texture and theme-controlled decorative opacity. Retire background editors and Admin/public pattern catalogs while preserving Hero local images, shared CDN facilities and historical database rows (#149).
 
 - Update the five active Go modules and tools to Go 1.26.10, and pin Nuxt Docker stages to Node 24.22.1 Bookworm Slim without changing third-party dependencies or lockfiles.

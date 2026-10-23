@@ -791,7 +791,7 @@ until a separately scoped migration:
   helpers. It MUST NOT own global GoFurry theme/design-token declarations.
 - `styles/index.less`: style composition/import root.
 - `styles/tokens.less`: canonical owner of global semantic token declarations,
-  including the layout-owned `--gf-page-background` and `--gf-page-pattern*` group.
+  including the layout-owned `--gf-page-background` and `--gf-page-dot-*` group.
 - `styles/mixins.less`: reusable Less behavior built on tokens.
 - `styles/primitives/*.less`: shared domain-neutral visual building blocks.
 - `styles/components/*.less`: compound product UI, including preferences,
@@ -1935,12 +1935,17 @@ autoplay follow-up's pending dynamic review. No Visual baseline update or final
 Visual Closure is authorized by this work.
 
 
-## Static public page texture (#149)
+## Public canvas and edge dots (#149 / #151)
 
-`PublicPageBackground.vue` alone renders the bundled original
-`/web/background/background.webp` through repeating CSS `background-image`.
-`tokens.less` owns canvas, 512px tile size and the decorative layer's Light/Dark
-opacity; no Mask or replacement color token remains. SSR and client DOM match.
+`PublicPageBackground.vue` alone owns the fixed solid canvas and page-top CSS
+radial-dot decoration. Light stays `#f2e3d0`; Dark is neutral `#1d1f22`.
+`tokens.less` owns dot color/alpha/geometry. Nested, prefixed linear masks fade
+vertically to 520px and horizontally across each `min(22%, 340px)` desktop edge,
+leaving at least 56% clear. The grid is 26px with a 0.8px radius; mobile uses
+28px / 185px with only downward fading. Dots scroll away naturally, without JS,
+images, animations, filters, fixed decoration or pointer interception.
+Maximum alpha before masking is Light 0.24 / Dark 0.22; tablet 0.16 / 0.15 and
+mobile 0.12 / 0.10. SSR and client DOM match; theme changes only tokens.
 Page texture never reads browser preferences/IndexedDB or fetches a catalog.
 Preferences has only Home and Resource routing; preserve roving tab focus,
 Home/End/wrapping arrows, panel inertness, scrolling, Save/Cancel and #139 motion.

@@ -267,14 +267,13 @@ Nav Backend's opt-in `TestRealDevAppearanceQueries` uses only transaction-local
 temporary tables copied from the Goose schema to verify pool isolation,
 disabled/deleted filtering and Hero pagination on real PostgreSQL.
 
-## Static page texture (#149)
+## Public page decoration (#149 / #151)
 
-`PublicPageBackground.vue` is the sole public canvas renderer. It uses the
-unchanged original 512×512 `/web/background/background.webp` with CSS
-`background-image`, `repeat`, and a 512px tile. The independent decorative layer
-has opacity 0.055 in Light and 0.075 in Dark; the canvas and page content remain
-opaque. The RGB wolf details and original alpha are preserved. No Mask, color
-replacement, client mount work, browser storage or catalog request is involved.
+`PublicPageBackground.vue` is the sole public canvas renderer: a fixed solid
+Light warm / Dark graphite canvas and page-top CSS radial dots with horizontal
+and vertical linear masks. The dot layer scrolls away; no image asset, client
+mount work, browser storage or catalog request is involved. Geometry and theme
+alpha live in `tokens.less`; see the Design System for the responsive values.
 SSR and hydration render the same static DOM. Old `gf_background_preference`
 and `gofurry-page-background` data are ignored, not migrated or read.
 
@@ -284,9 +283,8 @@ remain untouched pending a separately authorized data review/migration. CloudOps
 can still inspect/repair historical objects. Hero local images and shared
 COS/R2/CDN routing are independent and retained.
 
-Use `tests/browser/regression/static-page-background.spec.ts` for SSR, exact asset
-bytes, theme repeat/opacity, stale-preference isolation and absence of catalog/IDB
-reads; Preferences and routing owners verify the remaining two tabs.
+Use `tests/browser/regression/static-page-background.spec.ts` for SSR, dot geometry/masks, fixed canvas versus scrolling decoration, responsive
+theme changes, stale-preference isolation and absence of catalog/IDB reads; Preferences and routing owners verify the remaining two tabs.
 
 ## CloudOps
 
