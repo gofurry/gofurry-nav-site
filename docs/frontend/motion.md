@@ -75,3 +75,26 @@ same-page `emulateMedia` changes. Fake timers belong in isolated unit/Nuxt cases
 Browser evidence uses observable readiness, strict request/error accounting and
 no fixed sleeps. Local fixtures and review screenshots are not production or
 maintainer visual acceptance. See the [A audit and evidence](../acceptance/139-a-motion-foundation.md).
+
+## User-triggered theme reveal (#150)
+
+NavBar alone wraps its existing Theme Store update with a same-document native
+View Transition. The new root snapshot expands from the actual button center
+to the farthest viewport corner in 420ms, using `cubic-bezier(0.22, 1, 0.36, 1)`
+in both directions. This does not enable cross-page transitions. Initialization,
+`html.dark`, persistence and theme ownership remain unchanged.
+
+`useThemeReveal` / `themeReveal.ts` own the disposable visual lifecycle, ignore
+overlapping clicks and apply the selected theme once even if capture is skipped.
+Reduced Motion, hidden pages, unsupported APIs and invalid origins use the direct
+path; Reduced also finishes theme-color transitions immediately. Live Reduced,
+resize, route change, page exit and unmount settle active work.
+Native `ready` / `finished` and WAAPI completion own cleanup, with no timer.
+Before the new capture, only color/surface CSS transitions are finished; transform,
+opacity and CSS animation contracts remain intact. Error artwork alone suppresses
+its theme-layer fade while the temporary marker exists. Normal direct fallback
+retains the existing 500ms theme transitions.
+
+The lifecycle unit owner is `themeReveal.test.ts`; native Browser evidence stays
+with Nav Shell, Error Experience, Games Home and Insights Navigation. Their strict
+network/error ledgers remain in force. Fixture evidence is not human visual approval.

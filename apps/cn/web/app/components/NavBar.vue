@@ -105,6 +105,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { PhBinoculars, PhFlask, PhGameController, PhGearSix, PhGithubLogo, PhHouse, PhList, PhMoon, PhSun, PhX } from '@phosphor-icons/vue'
 import { useThemeStore } from '@/stores/theme'
+import { useThemeReveal } from '@/composables/useThemeReveal'
 import { useI18n } from 'vue-i18n'
 import logo from '@/assets/svgs/logo-mini.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
@@ -117,6 +118,7 @@ const router = useRouter()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 const themeStore = useThemeStore()
+const toggleThemeIcon = useThemeReveal()
 const props = defineProps<{ navOverlayDesktop?: boolean, inactive?: boolean }>()
 const emit = defineEmits<{ busy: [value: boolean] }>()
 const menuId = useId()
@@ -282,5 +284,4 @@ function openModeModal(event: MouseEvent) {
   modeReturnFocus.value = event.currentTarget as HTMLElement
   showModeModal.value = true
 }
-function toggleThemeIcon() { themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light') }
 </script>

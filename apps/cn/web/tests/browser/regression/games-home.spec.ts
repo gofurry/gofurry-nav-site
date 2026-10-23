@@ -1,6 +1,18 @@
 import { test, expect, groupNames, assertGamesHomeAppearance, assertCardHover, assertStatsAppearance } from '../fixtures/games-home'
 import { assertNavigationClearance } from '../fixtures/navigation-clearance'
 import { mkdir, writeFile } from 'node:fs/promises'
+import { assertNativeReveal, observeThemeReveal } from '../fixtures/theme-reveal'
+
+test('150 Games theme snapshots retain real cards and the public canvas', async ({ page, gamesHome }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const scene = await gamesHome.open()
+  const titles = await scene.cards(0).locator('.game-card__title').allTextContents()
+  await observeThemeReveal(page)
+  const snapshot = await assertNativeReveal(page, page.getByRole('button', { name: '切换明暗主题图标', exact: true }), 'dark')
+  expect(snapshot.shellColor).toBe('rgb(29, 31, 34)')
+  await expect(scene.cards(0).locator('.game-card__title')).toHaveText(titles)
+  scene.assertQuiet()
+})
 
 test('C1 Home Normal motion keeps card directions and track geometry', async ({ gamesHome, page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })

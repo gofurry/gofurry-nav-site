@@ -1,5 +1,21 @@
 import { test, expect } from '../fixtures/error-experience'
 import { mkdir } from 'node:fs/promises'
+import { assertNativeReveal, observeThemeReveal } from '../fixtures/theme-reveal'
+
+test('150 error artwork is final in the native theme snapshot', async ({ page, errorExperience }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await errorExperience.open404()
+  if (process.env.GOFURRY_FIXTURE_DEV === '1') await page.locator('nuxt-error-overlay').locator('#pip-close').click()
+  await expect(errorExperience.root.locator('.error-page__artwork-layer.is-ready')).toHaveCount(2)
+  await observeThemeReveal(page)
+  const button = page.getByRole('button', { name: '切换明暗主题图标', exact: true })
+  for (const target of ['dark', 'light'] as const) {
+    const snapshot = await assertNativeReveal(page, button, target)
+    expect(snapshot.artOpacity).toBe('1')
+    await expect(errorExperience.activeArtwork.locator('img')).toHaveAttribute('src', `/web/404/illustration_001_16_9_${target}.avif`)
+  }
+  errorExperience.assertQuiet()
+})
 
 for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
   test(`151 error surfaces and 500 variant ${width} ${theme}`, async ({ page, errorExperience }) => {

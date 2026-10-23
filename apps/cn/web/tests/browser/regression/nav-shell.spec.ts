@@ -1,5 +1,71 @@
 import { test, expect } from '../fixtures/nav-shell'
 import { mkdir, writeFile } from 'node:fs/promises'
+import { assertNativeReveal, observeThemeReveal } from '../fixtures/theme-reveal'
+
+for (const width of [1440, 390]) {
+  test(`150 native theme reveal both directions and keyboard at ${width}`, async ({ page, navShell }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await navShell.open({ width, route: width === 1440 ? '/terms' : '/' })
+    const button = navShell.nav.getByRole('button', { name: '切换明暗主题图标', exact: true })
+    await observeThemeReveal(page)
+    // Repeat clicks in the same browser turn, while capture is still pending.
+    await button.evaluate(el => el.addEventListener('click', () => { (el as HTMLElement).click() }, { once: true }))
+    const dark = await assertNativeReveal(page, button, 'dark', 'Enter')
+    expect(dark.shellColor).toBe('rgb(29, 31, 34)')
+    await expect(button).toBeFocused()
+    await expect(button.locator('svg')).toHaveCount(1)
+    const light = await assertNativeReveal(page, button, 'light', 'Space')
+    expect(light.shellColor).toBe('rgb(242, 227, 208)')
+    await expect(button).toBeFocused()
+    navShell.assertQuiet()
+  })
+}
+
+test('150 theme reveal interruption, restoration, long-page position and refresh', async ({ page, navShell }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await navShell.open()
+  await navShell.scrollTo(400)
+  const button = navShell.nav.getByRole('button', { name: '切换明暗主题图标', exact: true })
+  await observeThemeReveal(page)
+  await page.exposeFunction('reduceThemeReveal', () => page.emulateMedia({ reducedMotion: 'reduce' }))
+  await page.evaluate(() => window.addEventListener('theme-reveal-started', () => {
+    void (window as Window & { reduceThemeReveal: () => Promise<void> }).reduceThemeReveal()
+  }, { once: true }))
+  await assertNativeReveal(page, button, 'dark')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await assertNativeReveal(page, button, 'light')
+  // A client route change must release a pending native snapshot too.
+  await page.evaluate(() => window.addEventListener('theme-reveal-started', () => {
+    const app = (document.querySelector('#__nuxt') as Element & { __vue_app__: {
+      config: { globalProperties: { $nuxt: { $router: { push: (to: string) => Promise<unknown> } } } }
+    } }).__vue_app__.config.globalProperties.$nuxt
+    void app.$router.push('/terms?theme=reveal')
+  }, { once: true }))
+  await button.click()
+  await expect(page).toHaveURL(/\/terms\?theme=reveal$/)
+  await expect(page.locator('html')).not.toHaveAttribute('data-gf-theme-reveal')
+  await navShell.assertTheme('dark')
+  navShell.assertQuiet()
+  await page.reload()
+  await navShell.assertTheme('dark')
+  await expect(page.locator('html')).not.toHaveAttribute('data-gf-theme-reveal')
+  navShell.assertQuiet()
+})
+
+test('150 Reduced and missing API switch directly with one persistence write', async ({ page, navShell }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await navShell.open()
+  await observeThemeReveal(page)
+  const button = navShell.nav.getByRole('button', { name: '切换明暗主题图标', exact: true })
+  await button.click(); await navShell.assertTheme('dark')
+  expect(await page.locator('.gf-app-shell').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(29, 31, 34)')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.evaluate(() => Object.defineProperty(document, 'startViewTransition', { value: undefined, configurable: true }))
+  await button.click(); await navShell.assertTheme('light')
+  expect(await page.evaluate(() => window.themeRevealProbe)).toEqual({ starts: 0, writes: ['dark', 'light'], animations: [] })
+  await expect(page.locator('html')).not.toHaveAttribute('data-gf-theme-reveal')
+  navShell.assertQuiet()
+})
 
 for (const width of [900, 1440]) {
   test(`145-C1 continuous utility tier and brand top hysteresis at ${width}`, async ({ page, navShell }) => {

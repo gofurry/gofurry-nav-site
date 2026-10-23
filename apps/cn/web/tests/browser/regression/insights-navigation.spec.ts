@@ -1,5 +1,17 @@
 import { test, expect, openRuntime, keyboardFocus } from '../fixtures/insights-domain'
 import { assertNavigationClearance } from '../fixtures/navigation-clearance'
+import { assertNativeReveal, observeThemeReveal } from '../fixtures/theme-reveal'
+
+test('150 Insights theme snapshots retain real navigation and data', async ({ page, runtime }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await openRuntime(page, '/insights/sites')
+  const content = await page.locator('.insights-page').innerText()
+  await observeThemeReveal(page)
+  const snapshot = await assertNativeReveal(page, page.getByRole('button', { name: '切换明暗主题图标', exact: true }), 'dark')
+  expect(snapshot.shellColor).toBe('rgb(29, 31, 34)')
+  await expect(page.locator('.insights-page')).toHaveText(content, { useInnerText: true })
+  runtime.assertQuiet()
+})
 
 for (const route of ['/insights/sites', '/en/insights/games']) {
   test(`145-C1.1 Insights navigation clearance ${route}`, async ({ page, runtime }) => {

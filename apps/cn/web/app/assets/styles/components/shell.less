@@ -24,6 +24,22 @@ html.dark .gf-app-shell {
   background: var(--gf-page-background);
 }
 
+/* Same-document theme reveal only: the new theme always expands above the old.
+ * No cross-page opt-in, and no change to ordinary motion outside this marker. */
+html[data-gf-theme-reveal]::view-transition { pointer-events: none; }
+html[data-gf-theme-reveal]::view-transition-group(root),
+html[data-gf-theme-reveal]::view-transition-old(root),
+html[data-gf-theme-reveal]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-gf-theme-reveal]::view-transition-old(root) { z-index: 1; }
+html[data-gf-theme-reveal]::view-transition-new(root) { z-index: 2; }
+
+/* Both artwork variants are already owned/preloaded by ErrorExperience. The new
+ * snapshot must use the final active layer, rather than its old opacity fade. */
+html[data-gf-theme-reveal] .error-page__artwork-layer { transition: none; }
+
 /* Page roots stay transparent so the layout-owned background remains visible. */
 .gf-app-shell .nav-home-page,
 .gf-app-shell .nav-content-shell,
