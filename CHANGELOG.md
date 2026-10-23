@@ -20,6 +20,8 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
+- Refine public edge dots with a wider 30px grid and viewport-fixed fades, naturally occluded by Home Hero. Coordinate remaining Dark Nav, Games, About/Legal and Preferences surfaces with the graphite canvas while preserving Light and semantic/media palettes (#149-C2, #151-B).
+
 - Use a neutral graphite Dark canvas with coordinated surface tokens and scrolling CSS edge-dot fades across public pages. Remove the retired WebP texture; keep the warm Light canvas and existing navigation geometry unchanged (#149, #151).
 
 - Replace public-page background customization with one original bundled WebP texture and theme-controlled decorative opacity. Retire background editors and Admin/public pattern catalogs while preserving Hero local images, shared CDN facilities and historical database rows (#149).

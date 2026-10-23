@@ -283,7 +283,7 @@ export async function assertSiteGroupAppearance(scene: Scene) {
   await css(panel, { 'border-color': 'rgba(0, 0, 0, 0)', 'background-color': 'rgba(0, 0, 0, 0)', 'box-shadow': 'none' })
   await css(back, { color: dark ? 'rgba(226, 232, 240, 0.88)' : accent, 'background-color': 'rgba(0, 0, 0, 0)' })
   if (await cards.count()) {
-    await css(cards.first(), { 'background-color': dark ? 'rgb(18, 30, 48)' : 'rgb(255, 244, 226)',
+    await css(cards.first(), { 'background-color': dark ? 'rgba(229, 231, 235, 0.08)' : 'rgb(255, 244, 226)',
       'box-shadow': dark ? 'rgba(0, 0, 0, 0) 0px 0px 0px 0px inset' : 'rgba(126, 92, 58, 0.18) 0px 0px 0px 1px inset' })
     await css(cards.first().locator('h3'), { color: title, 'font-size': '16px', 'line-height': '24px', 'font-weight': '500' })
     await css(cards.first().locator('p'), { color: muted, 'font-size': '12px', 'line-height': '16.2px' })

@@ -4,8 +4,9 @@ import { test, expect } from '../fixtures/nav-shell'
 import { test as gamesTest } from '../fixtures/games-home'
 import { test as sitesTest } from '../fixtures/site-groups'
 import { test as insightsTest } from '../fixtures/insights-domain'
+import { test as heroTest } from '../fixtures/nav-revealed-content'
 
-for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark'] as const) {
+for (const width of [1920, 1440, 1024, 768, 390]) for (const theme of ['light', 'dark'] as const) {
   test(`static page background ignores retired preferences: ${width}px ${theme}`, async ({ page, context, navShell }) => {
     const source = theme === 'light' ? 'server' : 'local'
     await context.addInitScript(source => {
@@ -31,24 +32,26 @@ for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark'
     await expect(canvas).toHaveCSS('position', 'fixed')
     await expect(canvas).toHaveCSS('background-color', theme === 'light' ? 'rgb(242, 227, 208)' : 'rgb(29, 31, 34)')
     await expect(canvas).toHaveCSS('opacity', '1')
+    await expect(page.locator('.legal-panel')).toHaveCSS('background-color', theme === 'dark' ? 'rgba(40, 42, 45, 0.74)' : 'rgba(255, 249, 241, 0.76)')
     await expect(canvas).toHaveCSS('pointer-events', 'none')
-    await expect(fade).toHaveCSS('position', 'absolute')
-    await expect(fade).toHaveCSS('height', width < 768 ? '185px' : '520px')
+    await expect(fade).toHaveCSS('position', 'fixed')
+    await expect(fade).toHaveCSS('height', width < 768 ? '185px' : '720px')
     await expect(fade).toHaveCSS('pointer-events', 'none')
     await expect(fade).toHaveCSS('mask-image', /linear-gradient/)
     await expect(left).toHaveCSS('background-image', /radial-gradient/)
     expect(await left.evaluate(el => getComputedStyle(el).backgroundImage)).toContain(alpha)
     await expect(left).toHaveCSS('background-repeat', 'repeat')
-    await expect(left).toHaveCSS('background-size', width < 768 ? '28px 28px' : '26px 26px')
+    await expect(left).toHaveCSS('background-size', width < 768 ? '28px 28px' : '30px 30px')
     await expect(left).toHaveCSS('filter', 'none')
     await expect(fade).toHaveCSS('animation-name', 'none')
     await expect(right).toHaveCSS('display', width < 768 ? 'none' : 'block')
     if (width >= 768) {
       const boxes = await Promise.all([left.boundingBox(), right.boundingBox()])
-      expect(boxes[0]!.width).toBeCloseTo(Math.min(width * .22, 340), 1)
+      expect(boxes[0]!.width).toBeCloseTo(Math.min(width * .30, 460), 1)
       expect(boxes[1]!.width).toBeCloseTo(boxes[0]!.width, 1)
-      expect(boxes[1]!.x - boxes[0]!.width).toBeGreaterThanOrEqual(width * .56 - 1)
-      await expect(left).toHaveCSS('mask-image', /to right/)
+      expect(boxes[1]!.x - boxes[0]!.width).toBeGreaterThanOrEqual(width * .40 - 1)
+      await expect(left).toHaveCSS('mask-image', /to right, rgb\(0, 0, 0\) 15%/)
+      await expect(fade).toHaveCSS('mask-image', /rgb\(0, 0, 0\) 18%/)
       await expect(right).toHaveCSS('mask-image', /to left/)
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
@@ -60,11 +63,11 @@ for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark'
     expect(await left.evaluate(el => getComputedStyle(el).backgroundImage)).toContain(alpha)
     expect(await page.evaluate(() => (window as Window & { backgroundDatabaseReads?: string[] }).backgroundDatabaseReads)).toEqual([])
     if (process.env.GOFURRY_149_REVIEW === '1') {
-      await mkdir('../../../.cache/149-c1-review', { recursive: true })
-      await page.screenshot({ path: `../../../.cache/149-c1-review/background-${width}-${theme}.png` })
+      await mkdir('../../../.cache/149-c2-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/149-c2-review/background-${width}-${theme}.png` })
     }
     await navShell.scrollTo(520)
-    expect((await fade.boundingBox())!.y + (await fade.boundingBox())!.height).toBeLessThanOrEqual(0)
+    expect((await fade.boundingBox())!.y).toBe(0)
     expect((await canvas.boundingBox())!.y).toBe(0)
     await navShell.scrollTo(0)
     await page.getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
@@ -77,6 +80,11 @@ for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark'
     await expect(page.locator('.gf-preferences-modal > .preferences-tabs').getByRole('tab')).toHaveCount(2)
     await page.locator('.gf-preferences-modal').getByRole('button', { name: '取消', exact: true }).click()
     await expect(page.locator('.gf-preferences-modal')).toHaveCount(0)
+    if (width === 1920 && theme === 'dark') {
+      await page.setViewportSize({ width, height: 400 })
+      await expect(fade).toHaveCSS('height', '400px')
+      expect((await fade.boundingBox())!.y).toBe(0)
+    }
     navShell.assertQuiet()
   })
 }
@@ -87,14 +95,14 @@ for (const config of [{ width: 1440, theme: 'dark' }, { width: 390, theme: 'ligh
     await expect(page.locator('[data-public-background]')).toHaveCount(1)
     await expect(page.locator('[data-page-dots]')).toHaveCount(1)
     await expect(page.locator('[data-public-background]')).toHaveCSS('background-color', config.theme === 'dark' ? 'rgb(29, 31, 34)' : 'rgb(242, 227, 208)')
-    await expect(page.locator('[data-page-dots]')).toHaveCSS('position', 'absolute')
+    await expect(page.locator('[data-page-dots]')).toHaveCSS('position', 'fixed')
     if (process.env.GOFURRY_149_REVIEW === '1') {
-      await mkdir('../../../.cache/149-c1-review', { recursive: true })
-      await page.screenshot({ path: `../../../.cache/149-c1-review/home-${config.width}-${config.theme}.png` })
+      await mkdir('../../../.cache/149-c2-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/149-c2-review/home-${config.width}-${config.theme}.png` })
     }
     await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }))
     expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0)
-    expect((await page.locator('[data-page-dots]').boundingBox())!.y).toBe(-await page.evaluate(() => scrollY))
+    expect((await page.locator('[data-page-dots]').boundingBox())!.y).toBe(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     navShell.assertQuiet()
   })
@@ -106,7 +114,7 @@ async function reviewPageCanvas(page: Page, owner: string) {
     const nuxt = (document.querySelector('#__nuxt') as Element & { __vue_app__?: { config: { globalProperties: { $nuxt?: { isHydrating: boolean } } } } })?.__vue_app__
     return nuxt?.config.globalProperties.$nuxt?.isHydrating === false
   })
-  for (const width of [1440, 1024, 768, 390]) {
+  for (const width of [1920, 1440, 1024, 768, 390]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
     for (const theme of ['dark', 'light'] as const) {
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
@@ -120,13 +128,12 @@ async function reviewPageCanvas(page: Page, owner: string) {
       await expect(dots.locator('.gf-public-background__dots--left')).toHaveCSS('background-image', /radial-gradient/)
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
       if (process.env.GOFURRY_149_REVIEW === '1' && ((width === 1440 && theme === 'dark') || (width === 390 && theme === 'light'))) {
-        await mkdir('../../../.cache/149-c1-review', { recursive: true })
+        await mkdir('../../../.cache/149-c2-review', { recursive: true })
         await page.evaluate(() => document.fonts.ready)
-        await page.screenshot({ path: `../../../.cache/149-c1-review/${owner}-${width}-${theme}.png` })
+        await page.screenshot({ path: `../../../.cache/149-c2-review/${owner}-${width}-${theme}.png` })
       }
       await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }))
-      const scroll = await page.evaluate(() => scrollY)
-      expect((await dots.boundingBox())!.y + scroll).toBe(0)
+      expect((await dots.boundingBox())!.y).toBe(0)
       expect((await canvas.boundingBox())!.y).toBe(0)
     }
   }
@@ -153,3 +160,32 @@ insightsTest('Insights shares the edge-dot and graphite canvas', async ({ page, 
   await reviewPageCanvas(page, 'insights')
   runtime.assertQuiet()
 })
+
+// Real opaque Hero resources and normal document flow, without a scroll listener.
+for (const config of [{ width: 1440, theme: 'dark' }, { width: 390, theme: 'light' }] as const) {
+  heroTest(`C2 Hero occludes fixed dots until content enters: ${config.width}`, async ({ revealed }) => {
+    const scene = await revealed.open(config)
+    const { page } = scene
+    const header = page.locator('.nav-header'), dots = page.locator('[data-page-dots]')
+    await scene.settle(header)
+    await expect(header).toHaveCSS('background-color', config.theme === 'dark' ? 'rgb(29, 31, 34)' : 'rgb(242, 227, 208)')
+    // Mobile decoration ends at 185px; sample inside that band in both states.
+    const clip = config.width < 768 ? { x: 0, y: 70, width: 20, height: 70 } : { x: 0, y: 200, width: 20, height: 120 }
+    const hero = await page.screenshot({ clip })
+    const heroWithoutDots = await page.screenshot({ clip, style: '[data-page-dots] { visibility: hidden; }' })
+    expect(hero.equals(heroWithoutDots)).toBe(true)
+    await scene.alignContent()
+    await scene.settle(scene.content, scene.bar)
+    await expect.poll(() => header.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(clip.y)
+    await expect(dots).toHaveCSS('position', 'fixed')
+    expect((await dots.boundingBox())!.y).toBe(0)
+    const content = await page.screenshot({ clip })
+    const contentWithoutDots = await page.screenshot({ clip, style: '[data-page-dots] { visibility: hidden; }' })
+    expect(content.equals(contentWithoutDots)).toBe(false)
+    if (process.env.GOFURRY_149_REVIEW === '1') {
+      await mkdir('../../../.cache/149-c2-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/149-c2-review/home-content-${config.width}-${config.theme}.png` })
+    }
+    scene.assertQuiet()
+  })
+}

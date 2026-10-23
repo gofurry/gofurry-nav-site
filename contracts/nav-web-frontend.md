@@ -1937,13 +1937,20 @@ Visual Closure is authorized by this work.
 
 ## Public canvas and edge dots (#149 / #151)
 
-`PublicPageBackground.vue` alone owns the fixed solid canvas and page-top CSS
+`PublicPageBackground.vue` alone owns the fixed solid canvas and viewport-fixed CSS
 radial-dot decoration. Light stays `#f2e3d0`; Dark is neutral `#1d1f22`.
 `tokens.less` owns dot color/alpha/geometry. Nested, prefixed linear masks fade
-vertically to 520px and horizontally across each `min(22%, 340px)` desktop edge,
-leaving at least 56% clear. The grid is 26px with a 0.8px radius; mobile uses
-28px / 185px with only downward fading. Dots scroll away naturally, without JS,
-images, animations, filters, fixed decoration or pointer interception.
+vertically to 720px (clamped to viewport height) and horizontally across each
+`min(30%, 460px)` desktop edge, leaving at least 40% clear. Opaque plateaus cover
+the first 18% vertically and 15% horizontally before smooth fading. The grid is
+30px with a 1.1px radius; mobile retains 28px / 0.8px / 185px with only downward
+fading. Both layers stay fixed through scrolling, without JS, images, animations,
+filters or pointer interception. The Home Header has an opaque page-color base
+below its unchanged Hero image/masks, naturally revealing the dots as it scrolls away.
+Dark Nav/Games/Static/Preferences surfaces retain local token ownership and use
+neutral graphite layers or shared surface aliases. Site Detail, Insights, Updates
+and Collections inherit existing neutral shared/domain owners; semantic accents,
+charts, media canvases, Hero and immersive Lottery keep their independent palettes.
 Maximum alpha before masking is Light 0.24 / Dark 0.22; tablet 0.16 / 0.15 and
 mobile 0.12 / 0.10. SSR and client DOM match; theme changes only tokens.
 Page texture never reads browser preferences/IndexedDB or fetches a catalog.

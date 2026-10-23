@@ -57,15 +57,19 @@ business rationale; historical values are not automatically approved examples.
 The layout-owned canvas (`--gf-page-background`) and edge-dot parameters
 (`--gf-page-dot-*`) live in `tokens.less`. The sole consumer,
 [PublicPageBackground.vue](../../apps/cn/web/app/components/common/PublicPageBackground.vue),
-keeps a fixed solid Light `#f2e3d0` / Dark `#1d1f22` canvas and an absolute page-top
+keeps a fixed solid Light `#f2e3d0` / Dark `#1d1f22` canvas and a viewport-fixed
 decoration. Radial dots fade horizontally per side and vertically through nested
 linear masks; no mask compositing, image, animation or JS is needed. Desktop uses
-26px / 0.8px dots in each `min(22%, 340px)` edge, fading by 520px. Mobile uses a
-28px top grid fading by 185px. Light warm-gray `#806c58` / Dark gray `#c1c5cb`
+30px / 1.1px dots in each `min(30%, 460px)` edge, fading by 720px (clamped to
+viewport height). Horizontal 15% / vertical 18% plateaus preserve outer/top detail.
+Mobile retains a 28px / 0.8px top grid fading by 185px. Light warm-gray `#806c58` / Dark gray `#c1c5cb`
 maximum alpha is 0.24 / 0.22, tablet 0.16 / 0.15, mobile 0.12 / 0.10.
-Only Dark surface/input/modal/nav/footer tokens are neutralized for #151; existing
+Dark Nav/Games/Static/Preferences local surfaces also coordinate with the shared
+graphite surface tokens for #151-B; existing
 transparency, focus and elevation mechanisms remain. No page preference, upload
-or catalog remains. Home Hero is independent. [main.css](../../apps/cn/web/app/assets/css/main.css)
+or catalog remains. The opaque Home Hero covers fixed dots until content enters;
+its resource/mask behavior is unchanged. Semantic, chart, media and immersive
+Lottery palettes remain independent. [main.css](../../apps/cn/web/app/assets/css/main.css)
 owns Tailwind bootstrap, browser reset and base helpers, not global theme tokens.
 
 ## Typography roles (#126)

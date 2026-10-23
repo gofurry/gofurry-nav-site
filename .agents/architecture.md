@@ -21,7 +21,7 @@ R2 Mirror failure as a warning. CloudOps uses scoped capabilities and GFA audit;
 there is no asset registry, replica table or synchronization worker. Nav Backend
 returns object keys, and Nuxt resolves the CDN using an SSR-readable preference
 cookie and browser probes. Local Hero backgrounds stay in IndexedDB; public page
-decoration uses CSS edge dots and linear masks over a fixed theme canvas, without images or client state. See
+decoration uses viewport-fixed CSS edge dots and linear masks over a fixed theme canvas, without images or client state. See
 `contracts/assets.md` and `docs/managed-assets.md`.
 This architecture entered production on 2026-09-14. Initial cutover is complete;
 `docs/managed-assets-cutover.md` is historical/rollback context and a first-deployment

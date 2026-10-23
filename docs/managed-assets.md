@@ -270,8 +270,8 @@ disabled/deleted filtering and Hero pagination on real PostgreSQL.
 ## Public page decoration (#149 / #151)
 
 `PublicPageBackground.vue` is the sole public canvas renderer: a fixed solid
-Light warm / Dark graphite canvas and page-top CSS radial dots with horizontal
-and vertical linear masks. The dot layer scrolls away; no image asset, client
+Light warm / Dark graphite canvas and viewport-fixed CSS radial dots with horizontal
+and vertical linear masks. The opaque Home Hero occludes the dot layer; no image asset, client
 mount work, browser storage or catalog request is involved. Geometry and theme
 alpha live in `tokens.less`; see the Design System for the responsive values.
 SSR and hydration render the same static DOM. Old `gf_background_preference`
@@ -283,7 +283,7 @@ remain untouched pending a separately authorized data review/migration. CloudOps
 can still inspect/repair historical objects. Hero local images and shared
 COS/R2/CDN routing are independent and retained.
 
-Use `tests/browser/regression/static-page-background.spec.ts` for SSR, dot geometry/masks, fixed canvas versus scrolling decoration, responsive
+Use `tests/browser/regression/static-page-background.spec.ts` for SSR, dot geometry/masks, fixed canvas and decoration through scrolling, plus Hero occlusion, responsive
 theme changes, stale-preference isolation and absence of catalog/IDB reads; Preferences and routing owners verify the remaining two tabs.
 
 ## CloudOps

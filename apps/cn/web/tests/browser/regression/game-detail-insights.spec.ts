@@ -116,7 +116,7 @@ test('Timeline and real chart themes retain date precision, ordering and respons
     await target.hover({ position: { x: (await target.boundingBox())!.width / 2, y: 150 } })
     const tooltip = root.locator('.game-insights-chart > div').last()
     await expect(tooltip).toContainText('2026-09')
-    await expect(tooltip).toHaveCSS('background-color', dark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 250, 242, 0.98)')
+    await expect(tooltip).toHaveCSS('background-color', dark ? 'rgba(40, 42, 45, 0.96)' : 'rgba(255, 250, 242, 0.98)')
     await expect(tooltip).toHaveCSS('color', dark ? 'rgb(226, 232, 240)' : 'rgb(41, 37, 36)')
     await expect(tooltip).toHaveCSS('border-color', kind === 'player'
       ? dark ? 'rgba(125, 211, 252, 0.28)' : 'rgba(217, 119, 6, 0.22)'

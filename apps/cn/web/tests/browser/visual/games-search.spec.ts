@@ -37,7 +37,7 @@ for (const theme of ['light', 'dark'] as const) {
     await search.page.locator('.game-search-page-button').filter({ hasText: /^\.\.\.$/ }).first().click()
     const dialog = search.page.locator('.game-search-jump-dialog')
     await expect(dialog.locator('input')).toBeFocused(); await dialog.locator('input').fill('4')
-    await expect(dialog).toHaveCSS('background-color', theme === 'dark' ? 'rgba(15, 23, 42, 0.94)' : 'rgba(255, 250, 242, 0.94)')
+    await expect(dialog).toHaveCSS('background-color', theme === 'dark' ? 'rgba(48, 50, 54, 0.94)' : 'rgba(255, 250, 242, 0.94)')
     await expect(dialog).toHaveCSS('border-radius', '10.4px')
     await search.page.mouse.move(1, 1)
     const clip = await searchClip(search, '.game-search-jump-dialog', 32)

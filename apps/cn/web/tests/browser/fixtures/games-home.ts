@@ -456,7 +456,7 @@ export { expect }
 export async function assertGamesHomeAppearance(scene: GamesHomeScene) {
   const { theme, sidebar, dock } = scene
   const dark = theme === 'dark', card = scene.cards(0).first()
-  await css(card, { 'background-color': dark ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.4)',
+  await css(card, { 'background-color': dark ? 'rgba(229, 231, 235, 0.08)' : 'rgba(255, 250, 242, 0.4)',
     'border-color': 'rgba(0, 0, 0, 0)', 'border-width': '1px', 'border-radius': '12px',
     'box-shadow': dark ? 'none' : 'rgba(91, 62, 28, 0.03) 0px 4px 12px 0px',
     'transition-property': 'background-color, border-color' })
@@ -479,14 +479,14 @@ export async function assertStatsAppearance(scene: GamesHomeScene) {
   await css(stats.locator('.stats-type-tab--active'), { 'font-size': '14px', 'line-height': '20px', 'font-weight': '600',
     color: dark ? 'rgba(226, 232, 240, 0.9)' : 'rgb(124, 45, 18)', 'background-color': 'rgba(0, 0, 0, 0)' })
   await css(stats.locator('.stats-type-tab--idle'), { color: dark ? 'rgba(180, 213, 226, 0.62)' : 'rgba(154, 52, 18, 0.74)' })
-  await css(stats.locator('.stats-page-tab--active'), { 'background-color': dark ? 'rgba(30, 41, 59, 0.52)' : 'rgba(255, 255, 255, 0.58)',
+  await css(stats.locator('.stats-page-tab--active'), { 'background-color': dark ? 'rgba(48, 50, 54, 0.52)' : 'rgba(255, 255, 255, 0.58)',
     'box-shadow': dark ? 'rgba(255, 255, 255, 0.08) 0px 1px 0px 0px inset' : 'rgba(255, 255, 255, 0.62) 0px 1px 0px 0px inset' })
 }
 
 export async function assertCardHover(scene: GamesHomeScene) {
   const card = scene.cards(0).first()
   await card.hover()
-  await css(card, { 'background-color': scene.theme === 'dark' ? 'rgba(148, 163, 184, 0.18)' : 'rgba(255, 235, 205, 0.82)',
+  await css(card, { 'background-color': scene.theme === 'dark' ? 'rgba(229, 231, 235, 0.16)' : 'rgba(255, 235, 205, 0.82)',
     'border-color': 'rgba(0, 0, 0, 0)', 'box-shadow': scene.theme === 'dark' ? 'none' : 'rgba(91, 62, 28, 0.03) 0px 4px 12px 0px' })
   await scene.page.mouse.move(1, 1)
   await scene.settle(card)
@@ -513,7 +513,7 @@ export async function assertNewsAppearance(scene: GamesHomeScene) {
     : { 'transition-property': 'transform', 'transition-duration': '0.34s',
         'transition-timing-function': 'cubic-bezier(0.22, 1, 0.36, 1)' })
   const card = news.locator('.news-card').first()
-  const normal = dark ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.4)'
+  const normal = dark ? 'rgba(229, 231, 235, 0.08)' : 'rgba(255, 250, 242, 0.4)'
   const shadow = dark ? 'none' : 'rgba(91, 62, 28, 0.03) 0px 4px 12px 0px'
   await css(card, { 'background-color': normal, 'border-color': 'rgba(0, 0, 0, 0)', 'border-width': '1px',
     'border-radius': '12.48px', 'box-shadow': shadow, 'backdrop-filter': 'blur(1px)',
@@ -531,7 +531,7 @@ export async function assertNewsAppearance(scene: GamesHomeScene) {
     ? 'color(srgb 0.886275 0.909804 0.941176 / 0.396863)' : 'color(srgb 0.486275 0.176471 0.0705882 / 0.44)',
   'transition-property': 'width', 'transition-duration': '0.22s' })
   await card.hover(); await scene.settle(news)
-  await css(card, { 'background-color': dark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(255, 235, 205, 0.82)',
+  await css(card, { 'background-color': dark ? 'rgba(229, 231, 235, 0.16)' : 'rgba(255, 235, 205, 0.82)',
     'border-color': 'rgba(0, 0, 0, 0)', 'box-shadow': shadow })
   await page.mouse.move(1, 1); await scene.settle(news)
   await css(card, { 'background-color': normal })
@@ -545,7 +545,7 @@ export async function assertLatestReviewsAppearance(scene: GamesHomeScene) {
   await page.mouse.move(1, 1); await scene.settle(reviews)
   await css(reviews.getByRole('heading'), { 'font-size': '13.44px', 'line-height': '19.2px', 'font-weight': '700', color: strong })
   const item = reviews.locator('.latest-review-item').first()
-  const normal = dark ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.4)'
+  const normal = dark ? 'rgba(229, 231, 235, 0.08)' : 'rgba(255, 250, 242, 0.4)'
   const shadow = dark ? 'none' : 'rgba(91, 62, 28, 0.03) 0px 4px 12px 0px'
   await css(item, { 'background-color': normal, 'border-width': '1px', 'border-color': 'rgba(0, 0, 0, 0)',
     'border-radius': '13.12px', 'box-shadow': shadow, padding: '10.88px', gap: '12px' })
@@ -559,7 +559,7 @@ export async function assertLatestReviewsAppearance(scene: GamesHomeScene) {
   await css(item.locator('.latest-review-item__meta'), { 'font-size': '12px', 'line-height': '16px', color: muted })
   await css(scene.sidebar, { 'background-color': 'rgba(0, 0, 0, 0)', 'border-width': '0px', 'box-shadow': 'none', 'backdrop-filter': 'none' })
   await item.hover(); await scene.settle(reviews)
-  await css(item, { 'background-color': dark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(255, 235, 205, 0.82)',
+  await css(item, { 'background-color': dark ? 'rgba(229, 231, 235, 0.16)' : 'rgba(255, 235, 205, 0.82)',
     'border-color': 'rgba(0, 0, 0, 0)', 'box-shadow': shadow })
   await page.mouse.move(1, 1); await scene.settle(reviews)
   await css(item, { 'background-color': normal })

@@ -51,7 +51,7 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 
 Admin publishes managed assets to COS Primary and an R2 best-effort Mirror, delivered through EdgeOne Primary CDN and Cloudflare Mirror CDN. The database stores provider-neutral object keys; the frontend uses browser-side preference and failure fallback. See [Managed assets](./docs/managed-assets.md) and the [asset contract](./contracts/assets.md).
 
-Public pages share CSS edge dots that scroll away over a warm Light or graphite Dark canvas. Preferences contains Home and Resource routing; local Home Hero images remain independent.
+Public pages share viewport-fixed CSS edge dots over a warm Light or graphite Dark canvas, naturally occluded by the Home Hero. Preferences contains Home and Resource routing; local Home Hero images remain independent.
 
 ## Stack
 

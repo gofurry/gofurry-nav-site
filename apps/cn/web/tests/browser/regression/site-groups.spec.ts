@@ -16,11 +16,11 @@ for (const theme of ['light', 'dark'] as const) {
     const dark = theme === 'dark'
     await assertSiteGroupAppearance(scene)
     await css(loadMore, { border: dark ? '1px solid rgba(226, 232, 240, 0.15)' : '1px solid rgba(126, 92, 58, 0.15)',
-      'border-radius': '999px', 'background-color': dark ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.42)',
+      'border-radius': '999px', 'background-color': dark ? 'rgba(229, 231, 235, 0.08)' : 'rgba(255, 250, 242, 0.42)',
       color: dark ? 'rgba(190, 208, 222, 0.72)' : 'rgba(124, 45, 18, 0.88)', 'font-size': '16px', 'line-height': '24px' })
     await cards.first().hover()
     await scene.settle(cards.first())
-    await css(cards.first(), { 'background-color': dark ? 'rgb(30, 41, 59)' : 'rgb(255, 230, 191)',
+    await css(cards.first(), { 'background-color': dark ? 'rgba(229, 231, 235, 0.16)' : 'rgb(255, 230, 191)',
       'box-shadow': dark ? 'rgba(203, 213, 225, 0.42) 0px 0px 0px 1px inset' : 'color(srgb 0.705882 0.376471 0.0941176 / 0.302824) 0px 0px 0px 1px inset' })
     const popover = page.locator('body > .site-popover')
     await expect(popover).toHaveClass(/site-popover--visible/)
@@ -36,12 +36,12 @@ for (const theme of ['light', 'dark'] as const) {
     await back.hover()
     await scene.settle(back)
     await css(back, { color: dark ? 'rgba(248, 250, 252, 0.96)' : 'rgba(71, 42, 20, 0.92)',
-      'background-color': dark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(255, 235, 205, 0.82)' })
+      'background-color': dark ? 'rgba(229, 231, 235, 0.12)' : 'rgba(255, 235, 205, 0.82)' })
     await scene.openSite()
     await scene.loadAll(async () => {
       await loadMore.hover()
       await scene.settle(loadMore)
-      await css(loadMore, { 'background-color': dark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(255, 235, 205, 0.82)',
+      await css(loadMore, { 'background-color': dark ? 'rgba(229, 231, 235, 0.16)' : 'rgba(255, 235, 205, 0.82)',
         color: dark ? 'rgba(226, 232, 240, 0.9)' : 'rgb(124, 45, 18)' })
     })
   })

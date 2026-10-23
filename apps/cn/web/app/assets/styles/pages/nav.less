@@ -158,27 +158,22 @@
 }
 
 html.dark .nav-home-page {
-  --nav-home-bg: #07111f;
-  --nav-home-card-bg: #121e30;
+  --nav-home-bg: var(--gf-page-background);
+  --nav-home-card-bg: var(--gf-surface);
   --nav-home-card-border: rgba(255, 255, 255, 0.08);
   --nav-home-card-text: rgba(248, 250, 252, 0.96);
   --nav-home-card-muted: rgba(148, 163, 184, 0.88);
-  --nav-home-popover-bg: rgba(15, 23, 42, 0.94);
+  --nav-home-popover-bg: rgba(40, 42, 45, 0.94);
   --nav-home-popover-border: rgba(255, 255, 255, 0.10);
   --nav-home-popover-text: rgba(226, 232, 240, 0.96);
   --nav-home-popover-muted: rgba(148, 163, 184, 0.88);
-  --nav-home-transition-bg: rgba(20, 28, 41, 0.84);
+  --nav-home-transition-bg: rgba(40, 42, 45, 0.84);
   --nav-home-group-title-hover: #7dd3fc;
 
 
   /* Spotlight Dark palette; structure and interaction stay in the shared selectors. */
   --nav-home-spotlight-panel-bg:
-    linear-gradient(
-      180deg,
-      rgba(30, 41, 59, 0.38) 0%,
-      rgba(15, 23, 42, 0.20) 44%,
-      rgba(15, 23, 42, 0) 100%
-    );
+    linear-gradient(180deg, rgba(48, 50, 54, 0.38) 0%, rgba(40, 42, 45, 0.20) 44%, rgba(40, 42, 45, 0) 100%);
   --nav-home-spotlight-accent-line:
     linear-gradient(
       90deg,
@@ -190,7 +185,7 @@ html.dark .nav-home-page {
       rgba(125, 211, 252, 0.12) 86%,
       transparent 100%
     );
-  --nav-home-spotlight-header-wash: linear-gradient(180deg, rgba(30, 41, 59, 0.22), transparent);
+  --nav-home-spotlight-header-wash: linear-gradient(180deg, rgba(48, 50, 54, 0.22), transparent);
   --nav-home-spotlight-divider:
     linear-gradient(
       90deg,
@@ -202,16 +197,16 @@ html.dark .nav-home-page {
     );
   --nav-home-spotlight-title-text: #f8fafc;
   --nav-home-spotlight-pager-text: rgba(180, 213, 226, 0.62);
-  --nav-home-spotlight-pager-hover-bg: rgba(148, 163, 184, 0.12);
+  --nav-home-spotlight-pager-hover-bg: rgba(229, 231, 235, 0.12);
   --nav-home-spotlight-pager-hover-text: rgba(226, 232, 240, 0.90);
   --nav-home-spotlight-pager-meta: rgba(203, 213, 225, 0.72);
-  --nav-home-spotlight-site-bg: rgba(15, 23, 42, 0.18);
+  --nav-home-spotlight-site-bg: rgba(40, 42, 45, 0.18);
   --nav-home-spotlight-site-accent: rgba(125, 211, 252, 0.54);
-  --nav-home-spotlight-site-hover-bg: rgba(148, 163, 184, 0.15);
+  --nav-home-spotlight-site-hover-bg: rgba(229, 231, 235, 0.15);
   --nav-home-spotlight-muted-text: rgba(203, 213, 225, 0.72);
   --nav-home-spotlight-visited-text: #fb923c;
   --nav-home-spotlight-visited-filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.34));
-  --nav-home-spotlight-logo-bg: rgba(15, 23, 42, 0.72);
+  --nav-home-spotlight-logo-bg: rgba(40, 42, 45, 0.72);
 }
 
 .nav-header {
@@ -224,6 +219,8 @@ html.dark .nav-home-page {
   justify-content: flex-start;
   overflow: hidden;
   padding: 5rem 1rem 0;
+  /* Opaque Hero canvas occludes the fixed page dots, including while its image loads. */
+  background: var(--gf-page-background);
   box-shadow: var(--nav-home-header-shadow);
   transition: background 0.4s ease-in-out;
 }
@@ -1002,7 +999,7 @@ html.dark .nav-group-title:hover {
 }
 
 html.dark .nav-site-card {
-  --nav-home-card-hover-bg: #1e293b;
+  --nav-home-card-hover-bg: var(--gf-surface-hover);
   --nav-home-card-hover-ring: inset 0 0 0 1px rgba(203, 213, 225, 0.42);
 
   box-shadow: inset 0 0 0 0 transparent;
@@ -1064,7 +1061,7 @@ html.dark .nav-site-card:hover {
 
 html.dark .nav-group-toggle {
   --nav-home-group-toggle-text: rgba(226, 232, 240, 0.88);
-  --nav-home-group-toggle-hover-bg: rgba(148, 163, 184, 0.12);
+  --nav-home-group-toggle-hover-bg: rgba(229, 231, 235, 0.12);
   --nav-home-group-toggle-hover-text: rgba(248, 250, 252, 0.96);
 
   color: var(--nav-home-group-toggle-text);
@@ -1113,16 +1110,16 @@ html.dark .site-group-page {
   --nav-site-group-muted-text: rgba(203, 213, 225, 0.62);
   --nav-site-group-accent-text: rgba(190, 208, 222, 0.72);
   --nav-site-group-accent-strong-text: rgba(226, 232, 240, 0.90);
-  --nav-site-group-card-bg: #121e30;
+  --nav-site-group-card-bg: var(--gf-surface);
   --nav-site-group-card-ring: inset 0 0 0 0 transparent;
-  --nav-site-group-card-hover-bg: #1e293b;
+  --nav-site-group-card-hover-bg: var(--gf-surface-hover);
   --nav-site-group-card-hover-ring: inset 0 0 0 1px rgba(203, 213, 225, 0.42);
   --nav-site-group-back-text: rgba(226, 232, 240, 0.88);
-  --nav-site-group-back-hover-bg: rgba(148, 163, 184, 0.12);
+  --nav-site-group-back-hover-bg: rgba(229, 231, 235, 0.12);
   --nav-site-group-back-hover-text: rgba(248, 250, 252, 0.96);
   --nav-site-group-action-border: rgba(226, 232, 240, 0.15);
-  --nav-site-group-action-bg: rgba(226, 232, 240, 0.065);
-  --nav-site-group-action-hover-bg: rgba(148, 163, 184, 0.18);
+  --nav-site-group-action-bg: var(--gf-surface);
+  --nav-site-group-action-hover-bg: var(--gf-surface-hover);
 }
 
 .site-group-header {
@@ -1402,7 +1399,7 @@ html.dark .site-popover__empty {
 
 html.dark .group-popover {
   --nav-home-group-popover-border: rgba(255, 255, 255, 0.10);
-  --nav-home-group-popover-bg: rgba(15, 23, 42, 0.92);
+  --nav-home-group-popover-bg: rgba(40, 42, 45, 0.92);
   --nav-home-group-popover-text: rgba(226, 232, 240, 0.92);
   --nav-home-group-popover-shadow:
     0 18px 42px rgba(2, 6, 23, 0.42),
@@ -1517,7 +1514,7 @@ html.dark .group-popover {
 
 html.dark .nav-transition-bar__author {
   --nav-home-transition-author-border: rgba(255, 255, 255, 0.10);
-  --nav-home-transition-author-bg: rgba(12, 18, 31, 0.94);
+  --nav-home-transition-author-bg: rgba(40, 42, 45, 0.94);
   --nav-home-transition-author-text: rgba(248, 250, 252, 0.96);
   --nav-home-transition-author-shadow: 0 12px 28px rgba(2, 6, 23, 0.42);
 

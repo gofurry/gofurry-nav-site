@@ -314,7 +314,7 @@ export async function assertSearchAppearance(scene: SearchScene, theme: 'light' 
   await expect(page.locator('.games-search-page')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   const card = page.locator('.search-result-page-slide:not([aria-hidden="true"]) .search-page-card').first()
   await expect(card).toHaveCSS('border-radius', '14.72px')
-  await expect(card).toHaveCSS('background-color', theme === 'dark' ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.42)')
+  await expect(card).toHaveCSS('background-color', theme === 'dark' ? 'rgba(229, 231, 235, 0.08)' : 'rgba(255, 250, 242, 0.42)')
   await expect(card.locator('.search-page-title')).toHaveCSS('font-weight', '700')
   await expect(card.locator('.search-page-desc')).toHaveCSS('font-size', '12.48px')
   await expect(card.locator('.search-page-desc')).toHaveCSS('line-height', '16.848px')
@@ -325,7 +325,7 @@ export async function assertSearchAppearance(scene: SearchScene, theme: 'light' 
 
 export async function assertFilterAppearance(scene: SearchScene, theme: 'light' | 'dark') {
   const { filter } = scene
-  await expect(filter).toHaveCSS('background-color', theme === 'dark' ? 'rgba(15, 23, 42, 0.94)' : 'rgba(255, 250, 242, 0.94)')
+  await expect(filter).toHaveCSS('background-color', theme === 'dark' ? 'rgba(48, 50, 54, 0.94)' : 'rgba(255, 250, 242, 0.94)')
   await expect(filter).toHaveCSS('border-radius', '16px')
   await expect(filter).toHaveCSS('backdrop-filter', 'blur(18px)')
   await expect(filter.locator('.game-search-filter-action').first()).toHaveCSS('font-size', '13.76px')
