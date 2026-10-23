@@ -1,6 +1,6 @@
 .error-page {
   /* Error owns its canvas, text and action identity; these are not global
-   * accent aliases. The mask and action treatment are shared by both themes. */
+   * accent aliases. Dark overrides its action fill without changing Light. */
   --gf-error-background: #f5e9d9;
   --gf-error-text: #483728;
   --gf-error-muted: #756453;
@@ -14,12 +14,14 @@
   color: var(--gf-error-text);
 }
 
-/* Dark changes only canvas/text/focus semantics; action and mask inherit. */
+/* Keep the artwork mask; coordinate Dark canvas, emphasis and action surfaces. */
 html.dark .error-page {
-  --gf-error-background: #0d1625;
+  --gf-error-background: #191b1e;
   --gf-error-text: #f2e6d6;
   --gf-error-muted: #b7b6bb;
-  --gf-error-accent: #edac6c;
+  --gf-error-accent: #d3a171;
+  --gf-error-action-fill: #393b3f;
+  --gf-error-action-fill-hover: #484b50;
 }
 
 .error-page__artwork { mask-image: var(--gf-error-art-mask); }

@@ -1,4 +1,56 @@
 import { test, expect } from '../fixtures/error-experience'
+import { mkdir } from 'node:fs/promises'
+
+for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
+  test(`151 error surfaces and 500 variant ${width} ${theme}`, async ({ page, errorExperience }) => {
+    await errorExperience.open404({ width, height: width === 390 ? 844 : 900, theme })
+    if (process.env.GOFURRY_FIXTURE_DEV === '1') {
+      // Nuxt's development-only error preview is expected on a real 404.
+      // Dismiss it through its own UI for local artwork review.
+      await page.locator('nuxt-error-overlay').locator('#pip-close').click()
+    }
+    const { root } = errorExperience
+    const primary = root.locator('.gf-button--primary'), secondary = root.locator('.gf-button--surface')
+    for (const status of [404, 500]) {
+      if (status === 500) {
+        // Exercise the real Nuxt error boundary's client state, not a fake error component.
+        await page.evaluate(() => {
+          const app = (document.querySelector('#__nuxt') as Element & {
+            __vue_app__: { config: { globalProperties: { $nuxt: { payload: { error: unknown } } } } }
+          }).__vue_app__.config.globalProperties.$nuxt
+          app.payload.error = { statusCode: 500, statusMessage: 'Fixture server error' }
+        })
+      }
+      await expect(root.locator('.error-page__code')).toHaveText(String(status))
+      await expect(root.getByRole('heading')).toHaveText(status === 404 ? '前方只有一片未知' : '前方发生意外')
+      await expect(primary).toHaveText(status === 404 ? '回到首页' : '再试一次')
+      await expect(secondary).toHaveText(status === 404 ? '原路返回' : '回到首页')
+      await expect(root).toHaveCSS('background-color', theme === 'dark' ? 'rgb(25, 27, 30)' : 'rgb(245, 233, 217)')
+      await expect(root.locator('.error-page__code')).toHaveCSS('color', theme === 'dark' ? 'rgb(211, 161, 113)' : 'rgb(172, 88, 44)')
+      await page.mouse.move(1, 1)
+      await expect(primary).toHaveCSS('background-color', theme === 'dark' ? 'rgb(57, 59, 63)' : 'rgb(174, 86, 40)')
+      await expect(secondary).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await primary.hover()
+      await expect(primary).toHaveCSS('background-color', theme === 'dark' ? 'rgb(72, 75, 80)' : 'rgb(180, 93, 44)')
+      await page.mouse.move(1, 1)
+      await primary.focus()
+      await primary.press('Tab'); await expect(secondary).toBeFocused()
+      await secondary.press('Shift+Tab'); await expect(primary).toBeFocused()
+      await expect(primary).toHaveCSS('outline-style', 'solid')
+      await expect(primary).toHaveCSS('outline-color', theme === 'dark' ? 'rgb(211, 161, 113)' : 'rgb(172, 88, 44)')
+      await primary.press('Tab'); await expect(secondary).toBeFocused()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+      if (process.env.GOFURRY_FIXTURE_DEV !== '1') {
+        await expect(page.locator('nuxt-error-overlay, vite-error-overlay, #nuxt-error-overlay')).toHaveCount(0)
+      }
+      if (process.env.GOFURRY_151_ERROR_REVIEW === '1') {
+        await mkdir('../../../.cache/151-error-review', { recursive: true })
+        await page.screenshot({ path: `../../../.cache/151-error-review/${status}-${width}-${theme}.png` })
+      }
+    }
+    errorExperience.assertQuiet()
+  })
+}
 
 test.describe('Real Nuxt 404', () => {
   test.use({ locale: 'zh-CN', contextOptions: { reducedMotion: 'no-preference' } })
