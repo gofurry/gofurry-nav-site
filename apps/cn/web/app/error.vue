@@ -1,5 +1,13 @@
 <template>
-  <NuxtLayout name="error">
+  <div v-if="transitionMode" class="gf-app-shell flex min-h-screen flex-col">
+    <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-6 px-4 py-12 text-center">
+      <h1>GoFurry</h1>
+      <p>{{ transitionNotice }}</p>
+      <button class="gf-button gf-button--stationary" @click="goHome">GoFurry</button>
+    </main>
+    <div class="gf-footer-shell"><TransitionFooter /></div>
+  </div>
+  <NuxtLayout v-else name="error">
     <ErrorExperience
       :status-code="statusCode"
       :variant="variant"
@@ -13,6 +21,9 @@
 <script setup lang="ts">
 import type { NuxtError } from '#app'
 import ErrorExperience from '@/components/error/ErrorExperience.vue'
+import TransitionFooter from '~/components/transition/TransitionFooter.vue'
+import { transitionNotice } from '#shared/utils/transitionMode'
+const transitionMode = useTransitionMode()
 
 const props = defineProps<{ error: NuxtError }>()
 const { locale } = useI18n()

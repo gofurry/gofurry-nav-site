@@ -225,6 +225,30 @@ html.dark .nav-home-page {
   transition: background 0.4s ease-in-out;
 }
 
+/* The temporary shell keeps the existing Hero renderer and search appearance. */
+.nav-home-page[data-transition-home] {
+  min-height: 0;
+}
+
+.nav-header.nav-header--transition {
+  height: auto;
+  min-height: 24rem;
+  flex: 1;
+  justify-content: center;
+  padding-block: 4rem;
+}
+
+.nav-header--transition .nav-header__search {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+}
+
+.transition-notice {
+  color: var(--gf-text-muted);
+}
+
 @media (min-width: 768px) {
   .nav-header {
     height: 100vh;

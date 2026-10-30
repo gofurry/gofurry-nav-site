@@ -3,6 +3,32 @@
 This frontend runs inside Docker; the production host needs Docker and Compose,
 not Node.js, pnpm or Task. The build context remains `apps/cn/web`.
 
+## 备案过渡期模式
+
+`NUXT_PUBLIC_TRANSITION_MODE` 默认 `false`。首次更新到包含此功能的前端镜像后，
+在现有 Compose 环境文件中设为 `true`，并使用原部署命令所用的相同环境文件、
+项目和 Compose 文件重新创建容器即可启用；之后切换无需重新构建。
+例如从本目录执行（维护者操作）：
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --no-build --force-recreate gofurry-nav-web
+```
+
+只执行 `docker compose restart` 不会加载修改后的容器环境。恢复时设为 `false`
+后同样重新创建。直接运行 Nitro 时，将变量传给 Node 进程并重启。
+该变量使用 Nuxt Runtime Config，同时传给 SSR 和客户端；不使用构建参数。
+
+过渡期仅开放 `/`、`/en`、站点/游戏基础详情及中英文旧详情地址重定向，其他
+页面由服务端返回 503 与建设期提示。首页仅查询现有 Hero 接口；站点基础资料
+使用现有只含基础字段的目录接口；游戏基础接口原本捆绑的资讯/监测字段不会
+进入过渡期页面 payload，且不发起评论、推荐或 Insights 请求。后台、Go 服务
+和数据库均无改动。
+
+切换前应清除 CDN/反向代理之前缓存的公开 HTML 和 Sitemap，避免旧 HTML
+绕过源站开关；公开页面禁止静态托管或在网关绕过 Nitro 提供历史预渲染产物。
+切换后检查 `/healthz`、中英文首页、桌面/移动搜索与备案信息、两类详情、
+暂停页的 503 以及 `/sitemap.xml`。正常模式继续使用原有完整页面和交互。
+
 For the alpha.9 release, use the [cross-service upgrade guide](../../../docs/releases/v3.0.0-alpha.9.md).
 The frontend-only engineering changes require no new runtime variables, but the
 full alpha.8 → alpha.9 upgrade also includes backend/schema changes.

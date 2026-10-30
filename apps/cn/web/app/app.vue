@@ -2,16 +2,18 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
-  <ClientOnly>
+  <ClientOnly v-if="!transitionMode">
     <PageScrollDock />
   </ClientOnly>
 </template>
 
 <script setup lang="ts">
 import PageScrollDock from '~/components/common/PageScrollDock.vue'
+const transitionMode = useTransitionMode()
 
 const { locale } = useI18n()
 const defaultSeo = computed(() => {
+  if (transitionMode.value) return { title: 'GoFurry', description: '网站目前处于建设中，部分内容与服务暂未开放。' }
   if (locale.value === 'en') {
     return {
       title: 'GoFurry Navigation - Discover furry culture resources and communities',

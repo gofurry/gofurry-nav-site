@@ -1,10 +1,12 @@
 <template>
   <NuxtPage v-if="hasChildRoute" />
+  <TransitionDetail v-else-if="transitionMode" kind="site" />
   <SiteDetailPage v-else />
 </template>
 
 <script setup lang="ts">
 import SiteDetailPage from '@/components/site/SiteDetailPage.vue'
+import TransitionDetail from '~/components/transition/TransitionDetail.vue'
 import { parsePositiveEntityRouteId } from '~/utils/routeIdentity'
 
 definePageMeta({
@@ -12,6 +14,7 @@ definePageMeta({
 })
 
 const route = useRoute()
+const transitionMode = useTransitionMode()
 if (!parsePositiveEntityRouteId(route.params.id)) {
   throw createError({
     statusCode: 404,

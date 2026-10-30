@@ -25,6 +25,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       NODE_ENV: production
+      NUXT_PUBLIC_TRANSITION_MODE: ${NUXT_PUBLIC_TRANSITION_MODE:-false}
       NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-https://go-furry.com}
       NUXT_PUBLIC_NAV_API_BASE: ${NUXT_PUBLIC_NAV_API_BASE:-https://nav.go-furry.com/api/v1}
       NUXT_PUBLIC_NAV_V2_API_BASE: ${NUXT_PUBLIC_NAV_V2_API_BASE:-https://nav.go-furry.com/api/v2}

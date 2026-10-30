@@ -2,6 +2,7 @@
   <header
       ref="headerRef"
       class="nav-header"
+      :class="{ 'nav-header--transition': transitionMode }"
   >
     <h1 class="sr-only">{{ homeHeading }}</h1>
     <HeroBackground :desktop-object-key="desktopObjectKey" :mobile-object-key="mobileObjectKey" />
@@ -11,7 +12,7 @@
 
     <div
         ref="quickRef"
-        v-if="showQuickAccess"
+        v-if="!transitionMode && showQuickAccess"
         class="nav-header__quick-access"
     >
       <NavQuickAccess
@@ -23,7 +24,7 @@
       />
     </div>
 
-    <div ref="hintRef" class="nav-header__scroll-hint" :class="{ 'nav-header__scroll-hint--hidden': !hintVisible }">
+    <div v-if="!transitionMode" ref="hintRef" class="nav-header__scroll-hint" :class="{ 'nav-header__scroll-hint--hidden': !hintVisible }">
       <span class="nav-header__scroll-label">
         {{ t('navHeader.scrollHint') }}
       </span>
@@ -142,7 +143,8 @@ defineProps<{
 }>()
 
 const { locale, t } = useI18n()
-const homeHeading = computed(() => locale.value === 'en'
+const transitionMode = useTransitionMode()
+const homeHeading = computed(() => transitionMode.value ? 'GoFurry' : locale.value === 'en'
   ? 'GoFurry Navigation - Discover furry communities, art, fiction, games, tools, and site monitoring'
   : 'GoFurry 兽人控导航站 - 发现兽人社区、艺术、小说、游戏、工具与站点监测资源'
 )
@@ -409,6 +411,7 @@ function customModalResize() {
 watch(() => route.fullPath, () => closeCustomSitesModal(false))
 
 onMounted(() => {
+  if (transitionMode.value) return
   hintObserver = new ResizeObserver(scheduleHint)
   observeHintLayout()
   window.addEventListener('resize', scheduleHint)

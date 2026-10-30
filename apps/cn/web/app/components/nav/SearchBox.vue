@@ -4,7 +4,7 @@
       class="search-box-shell relative isolate z-30 mt-2 flex w-full flex-col items-center md:mt-0"
   >
     <!-- 搜索类别 -->
-    <div class="search-category-row mb-3 w-full max-w-[500px] py-2.5">
+    <div v-if="!transitionMode" class="search-category-row mb-3 w-full max-w-[500px] py-2.5">
       <div class="search-category-track overflow-x-auto">
       <div class="search-category-items mx-auto flex w-max flex-nowrap gap-2 md:gap-3">
         <button
@@ -22,6 +22,13 @@
         </button>
       </div>
       </div>
+    </div>
+
+    <div v-if="transitionMode" class="search-platform-row mb-3 flex w-full max-w-[500px] flex-wrap justify-center gap-2" role="group" :aria-label="platformTitle" data-transition-platforms>
+      <button v-for="platform in transitionPlatforms" :key="platform.id" type="button"
+        class="search-chip cursor-pointer whitespace-nowrap px-3 py-1.5"
+        :class="{ 'search-chip-active': selectedPlatform.id === platform.id }"
+        :aria-pressed="selectedPlatform.id === platform.id" @click="selectedPlatform = platform">{{ platform.name }}</button>
     </div>
 
     <!-- 搜索框 -->
@@ -49,7 +56,7 @@
       <Transition name="search-suggestions" @leave="(_element, done) => done()">
       <ul
           ref="dropdownRef"
-          v-if="(keyword.trim() && dropdownVisible) || isLoading"
+          v-if="!transitionMode && ((keyword.trim() && dropdownVisible) || isLoading)"
           class="search-suggestion-list absolute left-0 top-[calc(100%+0.5rem)] z-[999] max-h-60 w-full origin-top-left overflow-y-auto overscroll-contain"
           @wheel.stop
           @touchmove.stop
@@ -88,7 +95,7 @@
       </Transition>
     </div>
 
-    <div ref="platformPicker" class="search-platform-picker pointer-events-none relative mt-2 h-11 w-full max-w-[500px] md:hidden"
+    <div v-if="!transitionMode" ref="platformPicker" class="search-platform-picker pointer-events-none relative mt-2 h-11 w-full max-w-[500px] md:hidden"
       @keydown.esc.stop.prevent="closePicker(true)" @focusout="handlePickerFocusOut">
       <div id="search-platform-options" role="group" :aria-label="platformTitle"
         class="absolute right-0 top-0 grid w-full gap-1.5" :style="{ gridTemplateColumns: `repeat(${pickerColumns}, minmax(0, 1fr))` }">
@@ -113,7 +120,7 @@
     </div>
 
     <!-- 搜索平台 -->
-    <div class="search-platform-row mt-1 hidden w-full md:block max-w-[620px] px-3 py-2.5">
+    <div v-if="!transitionMode" class="search-platform-row mt-1 hidden w-full md:block max-w-[620px] px-3 py-2.5">
       <div class="grid grid-cols-2 justify-center gap-2 md:flex md:flex-wrap md:gap-2">
         <div
             v-for="platform in platforms[selectedCategory]"
@@ -140,6 +147,7 @@ import { useReducedMotion } from '@/composables/useReducedMotion'
 
 const { t, locale } = useI18n()
 const route = useRoute()
+const transitionMode = useTransitionMode()
 const reducedMotion = useReducedMotion()
 const currentLang = computed(() => locale.value === 'en' ? 'en' : 'zh')
 const searchActionLabel = computed(() => currentLang.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
@@ -215,6 +223,9 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
 }))
 
 const selectedPlatform = ref<Platform>({ id: '', name: '', type: 'site' })
+const transitionPlatforms = computed(() => platforms.value[t('searchBox.platformCate.search')]!
+  .filter(platform => ['bing', 'bilibili', 'xiaohongshu', 'zhihu', 'weibo'].includes(platform.id))
+  .map(platform => ({ ...platform, name: currentLang.value === 'zh' && platform.id === 'bilibili' ? 'B站' : platform.name })))
 let timer: number | null = null
 let suggestionAbortController: AbortController | null = null
 let suggestionRequestId = 0
@@ -302,7 +313,7 @@ const resetSelection = () => {
   cancelSuggestions()
   closePicker()
   initDefaultCategory()
-  const defaultPlatform = platforms.value[selectedCategory.value]?.[0]
+  const defaultPlatform = transitionMode.value ? transitionPlatforms.value[0] : platforms.value[selectedCategory.value]?.[0]
   selectedPlatform.value = defaultPlatform || { id: '', name: '', type: 'site' }
   const order = platforms.value[selectedCategory.value]?.map(platform => platform.id) ?? []
   if (order.length) order.splice(Math.min(3, order.length - 1), 0, order.shift()!)
@@ -325,7 +336,7 @@ const highlightSegments = (item: string) => {
 const fetchSuggestions = async () => {
   const searchLabel = t('searchBox.platformCate.search')
   const requestKeyword = keyword.value.trim()
-  if (pickerExpanded.value || composing || !requestKeyword || selectedCategory.value !== searchLabel) {
+  if (transitionMode.value || pickerExpanded.value || composing || !requestKeyword || selectedCategory.value !== searchLabel) {
     abortSuggestionRequest()
     suggestions.value = []
     dropdownVisible.value = false
@@ -365,7 +376,7 @@ const fetchSuggestions = async () => {
 }
 
 function scheduleSuggestions() {
-  if (pickerExpanded.value || composing || scheduledKeyword === keyword.value) return
+  if (transitionMode.value || pickerExpanded.value || composing || scheduledKeyword === keyword.value) return
   cancelSuggestions()
   if (!keyword.value.trim() || selectedCategory.value !== t('searchBox.platformCate.search')) return
   scheduledKeyword = keyword.value
@@ -407,6 +418,10 @@ function handleKeyDown(event: KeyboardEvent) {
 const doSearch = () => {
   const kw = encodeURIComponent(keyword.value.trim())
   if (!kw) return
+  if (transitionMode.value && selectedPlatform.value.url) {
+    window.open(selectedPlatform.value.url.replace('{kw}', kw), '_blank')
+    return
+  }
 
   const mapping: Record<string, string> = {}
   Object.values(platforms.value).flat().forEach((p) => {

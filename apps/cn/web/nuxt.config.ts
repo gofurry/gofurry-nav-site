@@ -167,6 +167,7 @@ export default defineNuxtConfig({
     gameApiInternalBase,
     gameV2ApiInternalBase,
     public: {
+      transitionMode: false,
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       navApiBase: publicNavApiBase,
       navV2ApiBase: publicNavV2ApiBase,
@@ -181,8 +182,9 @@ export default defineNuxtConfig({
   },
   routeRules: {
     '/': { ssr: true },
-    '/about': { prerender: true },
-    '/about/faolan': { prerender: true },
+    // Pages must pass the runtime transition gate after deployment-time switches.
+    '/about': { ssr: true },
+    '/about/faolan': { ssr: true },
     '/nav': { ssr: true },
     '/sites': { ssr: true },
     '/sites/**': { ssr: true },

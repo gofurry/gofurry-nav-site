@@ -1,4 +1,5 @@
 import { parseGameInventory, parseSiteGroupInventory, parseSiteInventory, parseUpdateInventory } from '../utils/sitemapInventory'
+import { isTransitionMode, isTransitionPageOpen } from '../../shared/utils/transitionMode'
 
 function escapeXml(value: string) {
   return value
@@ -28,6 +29,8 @@ function addLocalizedUrls(urls: Set<string>, path: string) {
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
+  const transitionMode = isTransitionMode(config.public.transitionMode)
+  if (transitionMode) setHeader(event, 'cache-control', 'no-store')
   const siteUrl = String(config.public.siteUrl).replace(/\/$/, '')
   const urls = new Set<string>()
 
@@ -47,7 +50,7 @@ export default defineEventHandler(async (event) => {
     '/privacy',
     '/terms'
   ]) {
-    addLocalizedUrls(urls, path)
+    if (!transitionMode || isTransitionPageOpen(path)) addLocalizedUrls(urls, path)
   }
 
   let sites
@@ -57,18 +60,18 @@ export default defineEventHandler(async (event) => {
   try {
     const [siteResponse, siteGroupResponse, gameResponse, updateResponse] = await Promise.all([
       $fetch('/api/v2/nav/sites/index'),
-      $fetch('/api/v2/nav/site-groups', {
+      transitionMode ? Promise.resolve(null) : $fetch('/api/v2/nav/site-groups', {
         query: { lang: 'zh' }
       }),
       $fetch('/api/v2/game/list', {
         query: { limit: '5000', lang: 'zh', region: 'CN' }
       }),
-      $fetch('/api/v2/nav/updates', { query: { lang: 'zh' } }),
+      transitionMode ? Promise.resolve(null) : $fetch('/api/v2/nav/updates', { query: { lang: 'zh' } }),
     ])
     sites = parseSiteInventory(siteResponse)
-    siteGroups = parseSiteGroupInventory(siteGroupResponse)
+    siteGroups = transitionMode ? [] : parseSiteGroupInventory(siteGroupResponse)
     games = parseGameInventory(gameResponse)
-    updates = parseUpdateInventory(updateResponse)
+    updates = transitionMode ? [] : parseUpdateInventory(updateResponse)
   } catch (error) {
     throw createError({
       statusCode: 503,
