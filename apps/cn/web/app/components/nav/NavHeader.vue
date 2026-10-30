@@ -9,6 +9,7 @@
     <div ref="searchRef" class="nav-header__search">
       <SearchBox />
     </div>
+    <slot />
 
     <div
         ref="quickRef"

@@ -1,7 +1,10 @@
 <template>
   <div class="nav-home-page flex w-full flex-1 flex-col" data-transition-home>
-    <NavHeader :desktop-object-key="hero?.desktop?.object_key ?? null" :mobile-object-key="hero?.mobile?.object_key ?? null" />
-    <p class="transition-notice relative px-4 py-6 text-center">{{ transitionNotice }}</p>
+    <NavHeader :desktop-object-key="hero?.desktop?.object_key ?? null" :mobile-object-key="hero?.mobile?.object_key ?? null">
+      <p class="transition-notice pointer-events-none absolute inset-x-4 bottom-6 z-20 flex justify-center text-center">
+        <span class="search-chip max-w-full px-4 py-2">{{ transitionNotice }}</span>
+      </p>
+    </NavHeader>
   </div>
 </template>
 
